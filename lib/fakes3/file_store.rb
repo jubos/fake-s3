@@ -1,0 +1,153 @@
+require 'fileutils'
+require 'time'
+require 'fakes3/s3_object'
+require 'fakes3/bucket'
+require 'fakes3/rate_limitable_file'
+require 'digest/md5'
+require 'yaml'
+
+module FakeS3
+  class FileStore
+    SHUCK_METADATA_DIR = ".fakes3_metadataFFF"
+
+    def initialize(root)
+      @root = root
+      @buckets = []
+      @bucket_hash = {}
+      Dir[File.join(root,"*")].each do |bucket|
+        bucket_name = File.basename(bucket)
+        bucket_obj = Bucket.new(bucket_name,Time.now,[])
+        @buckets << bucket_obj
+        @bucket_hash[bucket_name] = bucket_obj
+      end
+    end
+
+    # Pass a rate limit in bytes per second
+    def rate_limit=(rate_limit)
+      if rate_limit.is_a?(String)
+        if rate_limit =~ /^(\d+)$/
+          RateLimitableFile.rate_limit = rate_limit.to_i
+        elsif rate_limit =~ /^(.*)K$/
+          RateLimitableFile.rate_limit = $1.to_f * 1000
+        elsif rate_limit =~ /^(.*)M$/
+          RateLimitableFile.rate_limit = $1.to_f * 1000000
+        elsif rate_limit =~ /^(.*)G$/
+          RateLimitableFile.rate_limit = $1.to_f * 1000000000
+        else
+          raise "Invalid Rate Limit Format: Valid values include (1000,10K,1.1M)"
+        end
+      else
+        RateLimitableFile.rate_limit = nil
+      end
+    end
+
+    def buckets
+      @buckets
+    end
+
+    def get_bucket(bucket)
+      @bucket_hash[bucket]
+    end
+
+    def create_bucket(bucket)
+      FileUtils.mkdir_p(File.join(@root,bucket))
+      bucket_obj = Bucket.new(bucket,Time.now,[])
+      if !@bucket_hash[bucket]
+        @buckets << bucket_obj
+        @bucket_hash[bucket] = bucket_obj
+      end
+    end
+
+    def get_object(bucket,object, request)
+      begin
+        real_obj = S3Object.new
+        obj_root = File.join(@root,bucket,object,SHUCK_METADATA_DIR)
+        metadata = YAML.parse(File.open(File.join(obj_root,"metadata"),'rb').read)
+        real_obj.name = object
+        real_obj.md5 = metadata[:md5].value
+        real_obj.content_type = metadata[:content_type] ? metadata[:content_type].value : "application/octet-stream"
+        #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
+        real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
+        return real_obj
+      rescue
+        puts $!
+        return nil
+      end
+    end
+
+    def object_metadata(bucket,object)
+    end
+
+    def copy_object(src_bucket,src_object,dst_bucket,dst_object)
+      src_root = File.join(@root,src_bucket,src_object,SHUCK_METADATA_DIR)
+      src_obj = S3Object.new
+      src_metadata_filename = File.join(src_root,"metadata")
+      src_metadata = YAML.parse(File.open(src_metadata_filename,'rb').read)
+      src_content_filename = File.join(src_root,"content")
+
+      dst_filename= File.join(@root,dst_bucket,dst_object)
+      FileUtils.mkdir_p(dst_filename)
+
+      metadata_dir = File.join(dst_filename,SHUCK_METADATA_DIR)
+      FileUtils.mkdir_p(metadata_dir)
+
+      content = File.join(metadata_dir,"content")
+      metadata = File.join(metadata_dir,"metadata")
+
+      File.open(content,'wb') do |f|
+        File.open(src_content_filename,'rb') do |input|
+          f << input.read
+        end
+      end
+
+      File.open(metadata,'w') do |f|
+        File.open(src_metadata_filename,'r') do |input|
+          f << input.read
+        end
+      end
+
+      obj = S3Object.new
+      obj.md5 = src_metadata[:md5]
+      obj.content_type = src_metadata[:content_type]
+      return obj
+    end
+
+    def store_object(bucket,object,request)
+      begin
+        filename = File.join(@root,bucket,object)
+        FileUtils.mkdir_p(filename)
+
+        metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
+        FileUtils.mkdir_p(metadata_dir)
+
+        content = File.join(filename,SHUCK_METADATA_DIR,"content")
+        metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
+
+        md5 = Digest::MD5.new
+
+        File.open(content,'wb') do |f|
+          request.body do |chunk|
+            f << chunk
+            md5 << chunk
+          end
+        end
+
+        metadata_struct = {}
+        metadata_struct[:md5] = md5.hexdigest
+        metadata_struct[:content_type] = request.header["content-type"].first
+
+        File.open(metadata,'w') do |f|
+          f << YAML::dump(metadata_struct)
+        end
+        obj = S3Object.new
+        obj.md5 = metadata_struct[:md5]
+        obj.content_type = metadata_struct[:content_type]
+        return obj
+      rescue
+        puts $!
+        $!.backtrace.each { |line| puts line }
+        return nil
+      end
+    end
+  end
+end

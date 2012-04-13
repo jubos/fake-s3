@@ -1,0 +1,32 @@
+PATH
+  remote: .
+  specs:
+    fakes3 (0.1.0)
+      builder
+      thor
+
+GEM
+  remote: http://rubygems.org/
+  specs:
+    aws-s3 (0.6.2)
+      builder
+      mime-types
+      xml-simple
+    builder (2.1.2)
+    mime-types (1.16)
+    right_aws (2.0.0)
+      right_http_connection (>= 1.2.1)
+    right_http_connection (1.2.4)
+    thor (0.14.4)
+    xml-simple (1.0.12)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  aws-s3
+  builder
+  bundler (>= 1.0.0)
+  fakes3!
+  right_aws
+  thor

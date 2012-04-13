@@ -1,0 +1,3 @@
+#!/usr/bin/env ruby
+require 'fakes3/cli'
+FakeS3::CLI.start
