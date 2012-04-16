@@ -112,9 +112,9 @@ module FakeS3
       return obj
     end
 
-    def store_object(bucket,object,request)
+    def store_object(bucket,object_name,request)
       begin
-        filename = File.join(@root,bucket,object)
+        filename = File.join(@root,bucket.name,object_name)
         FileUtils.mkdir_p(filename)
 
         metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
@@ -124,6 +124,7 @@ module FakeS3
         metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
 
         md5 = Digest::MD5.new
+        # TODO put a tmpfile here first and mv it over at the end
 
         File.open(content,'wb') do |f|
           request.body do |chunk|
@@ -139,10 +140,27 @@ module FakeS3
         File.open(metadata,'w') do |f|
           f << YAML::dump(metadata_struct)
         end
+
         obj = S3Object.new
+        obj.name = object_name
         obj.md5 = metadata_struct[:md5]
         obj.content_type = metadata_struct[:content_type]
+
+        # TODO need a semaphore here since bucket is not probably not thread safe
+        bucket << obj
         return obj
+      rescue
+        puts $!
+        $!.backtrace.each { |line| puts line }
+        return nil
+      end
+    end
+
+    def delete_object(bucket,object_name,request)
+      begin
+        filename = File.join(@root,bucket.name,object_name)
+        FileUtils.rm_rf(filename)
+        bucket.delete(object_name)
       rescue
         puts $!
         $!.backtrace.each { |line| puts line }

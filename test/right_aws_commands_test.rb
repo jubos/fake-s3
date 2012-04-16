@@ -8,7 +8,7 @@ class RightAWSCommandsTest < Test::Unit::TestCase
   def setup
     @s3 = RightAws::S3Interface.new('1E3GDYEOGFJPIT7XXXXXX','hgTHt68JY07JKUY08ftHYtERkjgtfERn57XXXXXX',
                                     {:multi_thread => false, :server => 'localhost',
-                                      :port => 10453, :protocol => 'http',:logger => Logger.new("/dev/null") })
+                                      :port => 10453, :protocol => 'http',:logger => Logger.new("/dev/null"),:no_subdomains => true })
   end
 
   def teardown

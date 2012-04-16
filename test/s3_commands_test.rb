@@ -15,44 +15,44 @@ class S3CommandsTest < Test::Unit::TestCase
   end
 
   def test_create_bucket
-    bucket = Bucket.create("mybucket")
+    bucket = Bucket.create("ruby_aws_s3")
     assert_not_nil bucket
   end
 
   def test_store
-    bucket = Bucket.create("mybucket")
-    S3Object.store("hello","world","mybucket")
+    bucket = Bucket.create("ruby_aws_s3")
+    S3Object.store("hello","world","ruby_aws_s3")
 
     output = ""
-    obj = S3Object.stream("hello","mybucket") do |chunk|
+    obj = S3Object.stream("hello","ruby_aws_s3") do |chunk|
       output << chunk
     end
     assert_equal "world", output
   end
 
   def test_large_store
-    bucket = Bucket.create("mybucket")
+    bucket = Bucket.create("ruby_aws_s3")
     buffer = ""
     500000.times do
       buffer << "#{(rand * 100).to_i}"
     end
 
     buf_len = buffer.length
-    S3Object.store("big",buffer,"mybucket")
+    S3Object.store("big",buffer,"ruby_aws_s3")
 
     output = ""
-    S3Object.stream("big","mybucket") do |chunk|
+    S3Object.stream("big","ruby_aws_s3") do |chunk|
       output << chunk
     end
     assert_equal buf_len,output.size
   end
 
   def test_multi_directory
-    bucket = Bucket.create("mybucket")
-    S3Object.store("dir/myfile/123.txt","recursive","mybucket")
+    bucket = Bucket.create("ruby_aws_s3")
+    S3Object.store("dir/myfile/123.txt","recursive","ruby_aws_s3")
 
     output = ""
-    obj = S3Object.stream("dir/myfile/123.txt","mybucket") do |chunk|
+    obj = S3Object.stream("dir/myfile/123.txt","ruby_aws_s3") do |chunk|
       output << chunk
     end
     assert_equal "recursive", output
@@ -66,4 +66,62 @@ class S3CommandsTest < Test::Unit::TestCase
       assert_equal AWS::S3::NoSuchBucket,$!.class
     end
   end
+
+  def test_find_object
+    bucket = Bucket.create('find_bucket')
+    obj_name = 'short'
+    S3Object.store(obj_name,'short_text','find_bucket')
+    short = S3Object.find(obj_name,"find_bucket")
+    assert_not_nil(short)
+    assert_equal(short.value,'short_text')
+  end
+
+  def test_find_non_existent_object
+    bucket = Bucket.create('find_bucket')
+    obj_name = 'doesnotexist'
+    assert_raise AWS::S3::NoSuchKey do
+      should_throw = S3Object.find(obj_name,"find_bucket")
+    end
+
+    # Try something higher in the alphabet
+    assert_raise AWS::S3::NoSuchKey do
+      should_throw = S3Object.find("zzz","find_bucket")
+    end
+  end
+
+  def test_exists?
+    bucket = Bucket.create('ruby_aws_s3')
+    obj_name = 'dir/myfile/exists.txt'
+    S3Object.store(obj_name,'exists','ruby_aws_s3')
+    assert S3Object.exists?(obj_name, 'ruby_aws_s3')
+    assert !S3Object.exists?('dir/myfile/doesnotexist.txt','ruby_aws_s3')
+  end
+
+  def test_delete
+    bucket = Bucket.create("ruby_aws_s3")
+    S3Object.store("something_to_delete","asdf","ruby_aws_s3")
+    something = S3Object.find("something_to_delete","ruby_aws_s3")
+    S3Object.delete("something_to_delete","ruby_aws_s3")
+  end
+
+  def test_larger_lists
+    Bucket.create("ruby_aws_s3_many")
+    (0..100).each do |i|
+      ('a'..'z').each do |letter|
+        name = "#{letter}#{i}"
+        S3Object.store(name,"asdf","ruby_aws_s3_many")
+      end
+    end
+
+    bucket = Bucket.find("ruby_aws_s3_many")
+    assert_equal(bucket.objects.first.key,"a0")
+    assert_equal(bucket.size,1000)
+  end
+
+  # Copying an object
+  #S3Object.copy 'headshot.jpg', 'headshot2.jpg', 'photos'
+
+  # Renaming an object
+  #S3Object.rename 'headshot.jpg', 'portrait.jpg', 'photos'
+
 end

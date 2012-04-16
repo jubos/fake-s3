@@ -28,9 +28,10 @@ module FakeS3
     #<Error>
     #  <Code>NoSuchKey</Code>
     #  <Message>The resource you requested does not exist</Message>
-    #  <Resource>/mybucket/myfoto.jpg</Resource> 
+    #  <Resource>/mybucket/myfoto.jpg</Resource>
     #  <RequestId>4442587FB7D0A2F9</RequestId>
-    #</Error> 
+    #</Error>
+    #
     def self.error_no_such_bucket(name)
       output = ""
       xml = Builder::XmlMarkup.new(:target => output)
@@ -68,6 +69,54 @@ module FakeS3
         lbr.Marker
         lbr.MaxKeys("1000")
         lbr.IsTruncated("false")
+      }
+      output
+    end
+
+    # A bucket query gives back the bucket along with contents
+    #  <Contents>
+    #<Key>Nelson</Key>
+#    <LastModified>2006-01-01T12:00:00.000Z</LastModified>
+#    <ETag>&quot;828ef3fdfa96f00ad9f27c383fc9ac7f&quot;</ETag>
+#    <Size>5</Size>
+#    <StorageClass>STANDARD</StorageClass>
+#    <Owner>
+#      <ID>bcaf161ca5fb16fd081034f</ID>
+#      <DisplayName>webfile</DisplayName>
+#     </Owner>
+#    </Contents>
+
+    def self.append_objects_to_list_bucket_result(lbr,objects)
+      return if objects.nil? or objects.size == 0
+
+      objects.each do |s3_object|
+        lbr.Contents { |contents|
+          contents.Key(s3_object.name)
+          contents.LastModifed(s3_object.creation_date)
+          contents.ETag("\"#{s3_object.md5}\"")
+          contents.Size(s3_object.size)
+          contents.StorageClass("STANDARD")
+
+          contents.Owner { |owner|
+            owner.ID("abc")
+            owner.DisplayName("You")
+          }
+        }
+      end
+    end
+
+    def self.bucket_query(bucket_query)
+      output = ""
+      bucket = bucket_query.bucket
+      xml = Builder::XmlMarkup.new(:target => output)
+      xml.instruct! :xml, :version=>"1.0", :encoding=>"UTF-8"
+      xml.ListBucketResult(:xmlns => "http://s3.amazonaws.com/doc/2006-03-01/") { |lbr|
+        lbr.Name(bucket.name)
+        lbr.Prefix(bucket_query.prefix)
+        lbr.Marker(bucket_query.marker)
+        lbr.MaxKeys(bucket_query.max_keys)
+        lbr.IsTruncated(bucket_query.is_truncated?)
+        append_objects_to_list_bucket_result(lbr,bucket_query.matches)
       }
       output
     end

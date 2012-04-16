@@ -1,21 +1,27 @@
 require 'webrick'
 require 'fakes3/file_store'
 require 'fakes3/xml_adapter'
+require 'fakes3/bucket_query'
+require 'fakes3/unsupported_operation'
 
 module FakeS3
   class Request
     CREATE_BUCKET = "CREATE_BUCKET"
     LIST_BUCKETS = "LIST_BUCKETS"
     LS_BUCKET = "LS_BUCKET"
+    HEAD = "HEAD"
     STORE = "STORE"
     COPY = "COPY"
     GET = "GET"
     GET_ACL = "GET_ACL"
     SET_ACL = "SET_ACL"
     MOVE = "MOVE"
-    DELETE = "DELETE"
+    DELETE_OBJECT = "DELETE_OBJECT"
+    DELETE_BUCKET = "DELETE_BUCKET"
 
-    attr_accessor :bucket,:object,:type,:src_bucket,:src_object,:method,:webrick_request,:path,:is_path_style
+    attr_accessor :bucket,:object,:type,:src_bucket,
+                  :src_object,:method,:webrick_request,
+                  :path,:is_path_style,:query,:http_verb
 
     def inspect
       puts "-----Inspect FakeS3 Request"
@@ -26,6 +32,7 @@ module FakeS3
       puts "Object: #{@object}"
       puts "Src Bucket: #{@src_bucket}"
       puts "Src Object: #{@src_object}"
+      puts "Query: #{@query}"
       puts "-----Done"
     end
   end
@@ -51,8 +58,15 @@ module FakeS3
         bucket_obj = @store.get_bucket(s_req.bucket)
         if bucket_obj
           response.status = 200
-          response.body = XmlAdapter.bucket(bucket_obj)
           response['Content-Type'] = "application/xml"
+          query = {
+            :marker => s_req.query["marker"] ? s_req.query["marker"].to_s : nil,
+            :prefix => s_req.query["prefix"] ? s_req.query["prefix"].to_s : nil,
+            :max_keys => s_req.query["max_keys"] ? s_req.query["max_keys"].to_s : nil,
+            :delimiter => s_req.query["delimiter"] ? s_req.query["delimiter"].to_s : nil
+          }
+          bq = bucket_obj.query_for_range(query)
+          response.body = XmlAdapter.bucket_query(bq)
         else
           response.status = 404
           response.body = XmlAdapter.error_no_such_bucket(s_req.bucket)
@@ -98,19 +112,23 @@ module FakeS3
           end
         end
         response['Content-Length'] = File::Stat.new(real_obj.io.path).size
-        response.body = real_obj.io
+        if s_req.http_verb == 'HEAD'
+          response.body = ""
+        else
+          response.body = real_obj.io
+        end
       end
     end
 
     def do_PUT(request,response)
       s_req = normalize_request(request)
 
-
       case s_req.type
       when Request::COPY
         @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object)
       when Request::STORE
-        real_obj = @store.store_object(s_req.bucket,s_req.object,s_req.webrick_request)
+        bucket_obj = @store.get_bucket(s_req.bucket)
+        real_obj = @store.store_object(bucket_obj,s_req.object,s_req.webrick_request)
         response['Etag'] = real_obj.md5
       when Request::CREATE_BUCKET
         @store.create_bucket(s_req.bucket)
@@ -126,10 +144,46 @@ module FakeS3
     end
 
     def do_DELETE(request,response)
-      p request
+      s_req = normalize_request(request)
+
+      case s_req.type
+      when Request::DELETE_OBJECT
+        bucket_obj = @store.get_bucket(s_req.bucket)
+        @store.delete_object(bucket_obj,s_req.object,s_req.webrick_request)
+      end
+
+      response.status = 204
+      response.body = ""
     end
 
     private
+
+    def normalize_delete(webrick_req,s_req)
+      path = webrick_req.path
+      path_len = path.size
+      query = webrick_req.query
+      if path == "/" and s_req.is_path_style
+        # Probably do a 404 here
+      else
+        if s_req.is_path_style
+          elems = path[1,path_len].split("/")
+          s_req.bucket = elems[0]
+        else
+          elems = path.split("/")
+        end
+
+        if elems.size == 0
+          raise UnsupportedOperation
+        elsif elems.size == 1
+          s_req.type = Request::DELETE_BUCKET
+          s_req.query = query
+        else
+          s_req.type = Request::DELETE_OBJECT
+          object = elems[1,elems.size].join('/')
+          s_req.object = object
+        end
+      end
+    end
 
     def normalize_get(webrick_req,s_req)
       path = webrick_req.path
@@ -150,6 +204,7 @@ module FakeS3
           s_req.type = Request::LIST_BUCKETS
         elsif elems.size == 1
           s_req.type = Request::LS_BUCKET
+          s_req.query = query
         else
           if query["acl"] == ""
             s_req.type = Request::GET_ACL
@@ -219,11 +274,15 @@ module FakeS3
         s_req.is_path_style = false
       end
 
+      s_req.http_verb = webrick_req.request_method
+
       case webrick_req.request_method
       when 'PUT'
         normalize_put(webrick_req,s_req)
-      when 'GET'
+      when 'GET','HEAD'
         normalize_get(webrick_req,s_req)
+      when 'DELETE'
+        normalize_delete(webrick_req,s_req)
       else
         raise "Unknown Request"
       end
