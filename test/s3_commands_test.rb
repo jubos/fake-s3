@@ -7,7 +7,10 @@ class S3CommandsTest < Test::Unit::TestCase
   include AWS::S3
 
   def setup
-    AWS::S3::Base.establish_connection!(:access_key_id => "123", :secret_access_key => "abc", :server => "localhost", :port => "10453" )
+    AWS::S3::Base.establish_connection!(:access_key_id => "123",
+                                        :secret_access_key => "abc",
+                                        :server => "localhost",
+                                        :port => "10453" )
   end
 
   def teardown

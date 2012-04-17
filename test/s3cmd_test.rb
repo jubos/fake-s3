@@ -1,8 +1,9 @@
 require 'test/test_helper'
 require 'fileutils'
-#require 'fakes3/server'
 
 # You need to have s3cmd installed to use this
+# Also, s3cmd doesn't support path style requests, so in order to properly test
+# it you need to modify your dns by changing /etc/hosts or using dnsmasq
 class S3CmdTest < Test::Unit::TestCase
 
   def setup
