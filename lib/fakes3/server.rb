@@ -129,6 +129,11 @@ module FakeS3
         @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object)
       when Request::STORE
         bucket_obj = @store.get_bucket(s_req.bucket)
+        if !bucket_obj
+          # Lazily create a bucket.  TODO fix this to return the proper error
+          bucket_obj = @store.create_bucket(s_req.bucket)
+        end
+
         real_obj = @store.store_object(bucket_obj,s_req.object,s_req.webrick_request)
         response['Etag'] = real_obj.md5
       when Request::CREATE_BUCKET

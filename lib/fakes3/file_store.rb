@@ -60,6 +60,7 @@ module FakeS3
         @buckets << bucket_obj
         @bucket_hash[bucket] = bucket_obj
       end
+      bucket_obj
     end
 
     def delete_bucket(bucket_name)
