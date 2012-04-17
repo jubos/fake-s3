@@ -12,9 +12,11 @@ FakeS3 doesn't support all of the S3 command set, but the basic ones like put, g
 list, copy, and make bucket are supported.  More coming soon.
 
 ## Installation
+
     gem install fakes3
 
 ## Running
+
 To run a fakes3 server, you just specify a root and a port.
 
     fakes3 -r /mnt/fakes3_root -p 4567
@@ -24,6 +26,8 @@ To run a fakes3 server, you just specify a root and a port.
 Take a look at the test cases to see client example usage.  For now, FakeS3 is
 mainly tested with s3cmd, aws-s3 gem, and right_aws.  There are plenty more
 libraries out there, and please do mention if other clients work or not.
+
+Here is a running list of [supported clients](https://github.com/jubos/fake-s3/wiki/Supported-Clients "Supported Clients")
 
 ## Running Tests
 
@@ -39,4 +43,4 @@ It is a TODO to get this to be just one command
 
 ## More Information
 
-Check out the wiki https://github.com/jubos/fake-s3/wiki
+Check out the [wiki](https://github.com/jubos/fake-s3/wiki)
