@@ -1,6 +1,6 @@
 require 'test/test_helper'
 require 'fileutils'
-require 'fakes3/server'
+#require 'fakes3/server'
 require 'right_aws'
 
 class RightAWSCommandsTest < Test::Unit::TestCase

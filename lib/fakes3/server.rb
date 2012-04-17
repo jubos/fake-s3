@@ -3,6 +3,7 @@ require 'fakes3/file_store'
 require 'fakes3/xml_adapter'
 require 'fakes3/bucket_query'
 require 'fakes3/unsupported_operation'
+require 'fakes3/errors'
 
 module FakeS3
   class Request
@@ -139,8 +140,8 @@ module FakeS3
       response['Content-Type'] = "text/xml"
     end
 
+    # Posts aren't supported yet
     def do_POST(request,response)
-      p request
     end
 
     def do_DELETE(request,response)
@@ -150,6 +151,8 @@ module FakeS3
       when Request::DELETE_OBJECT
         bucket_obj = @store.get_bucket(s_req.bucket)
         @store.delete_object(bucket_obj,s_req.object,s_req.webrick_request)
+      when Request::DELETE_BUCKET
+        @store.delete_bucket(s_req.bucket)
       end
 
       response.status = 204

@@ -1,6 +1,6 @@
 require 'test/test_helper'
 require 'fileutils'
-require 'fakes3/server'
+#require 'fakes3/server'
 
 # You need to have s3cmd installed to use this
 class S3CmdTest < Test::Unit::TestCase

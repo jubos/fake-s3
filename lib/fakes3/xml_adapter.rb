@@ -24,6 +24,19 @@ module FakeS3
       output
     end
 
+    def self.error(error)
+      output = ""
+      xml = Builder::XmlMarkup.new(:target => output)
+      xml.instruct! :xml, :version=>"1.0", :encoding=>"UTF-8"
+      xml.Error { |err|
+        err.Code(error.code)
+        err.Message(error.message)
+        err.Resource(error.resource)
+        err.RequestId(1)
+      }
+      output
+    end
+
     # <?xml version="1.0" encoding="UTF-8"?>
     #<Error>
     #  <Code>NoSuchKey</Code>
@@ -39,6 +52,19 @@ module FakeS3
       xml.Error { |err|
         err.Code("NoSuchBucket")
         err.Message("The resource you requested does not exist")
+        err.Resource(name)
+        err.RequestId(1)
+      }
+      output
+    end
+
+    def self.error_bucket_not_empty(name)
+      output = ""
+      xml = Builder::XmlMarkup.new(:target => output)
+      xml.instruct! :xml, :version=>"1.0", :encoding=>"UTF-8"
+      xml.Error { |err|
+        err.Code("BucketNotEmpty")
+        err.Message("The bucket you tried to delete is not empty.")
         err.Resource(name)
         err.RequestId(1)
       }
@@ -88,6 +114,12 @@ module FakeS3
 
     def self.append_objects_to_list_bucket_result(lbr,objects)
       return if objects.nil? or objects.size == 0
+
+      if objects.index(nil)
+        require 'ruby-debug'
+        Debugger.start
+        debugger
+      end
 
       objects.each do |s3_object|
         lbr.Contents { |contents|

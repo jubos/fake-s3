@@ -1,7 +1,7 @@
 require 'builder'
 require 'thread'
 require 'fakes3/s3_object'
-require 'fakes3/red_black_tree'
+require 'fakes3/sorted_object_list'
 
 module FakeS3
   class Bucket
@@ -10,27 +10,32 @@ module FakeS3
     def initialize(name,creation_date,objects)
       @name = name
       @creation_date = creation_date
-      @objects = SortedSet.new
-      @objects = RedBlackTree.new
+      @objects = SortedObjectList.new
       objects.each do |obj|
         @objects.add(obj)
       end
       @mutex = Mutex.new
     end
 
-    def <<(object)
-      # Unfortunately have to synchronize here since the RB Tree is not thread
-      # safe. Probably can get finer granularity if performance is important
+    def find(object_name)
       @mutex.synchronize do
-        exists = @objects.search(object.name)
-        if exists.nil?
-          @objects.add(object.name,object)
-        end
+        @objects.find(object_name)
       end
     end
 
-    def delete(object_name)
-      @objects.delete_via_key(object_name)
+    def add(object)
+      # Unfortunately have to synchronize here since the our SortedObjectList
+      # not thread safe. Probably can get finer granularity if performance is
+      # important
+      @mutex.synchronize do
+        @objects.add(object)
+      end
+    end
+
+    def remove(object)
+      @mutex.synchronize do
+        @objects.remove(object)
+      end
     end
 
     def query_for_range(options)
@@ -39,12 +44,9 @@ module FakeS3
       max_keys = options[:max_keys] || 1000
       delimiter = options[:delimiter]
 
-      matches = []
-      is_truncated = false
-
+      match_set = nil
       @mutex.synchronize do
-        matches, is_truncated = @objects.search_for_range(
-          marker,prefix,max_keys,delimiter)
+        match_set = @objects.list(options)
       end
 
       bq = BucketQuery.new
@@ -53,8 +55,8 @@ module FakeS3
       bq.prefix = prefix
       bq.max_keys = max_keys
       bq.delimiter = delimiter
-      bq.matches = matches
-      bq.is_truncated = is_truncated
+      bq.matches = match_set.matches
+      bq.is_truncated = match_set.is_truncated
       return bq
     end
 

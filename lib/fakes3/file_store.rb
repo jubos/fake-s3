@@ -45,6 +45,10 @@ module FakeS3
       @buckets
     end
 
+    def get_bucket_folder(bucket)
+      File.join(@root,bucket.name)
+    end
+
     def get_bucket(bucket)
       @bucket_hash[bucket]
     end
@@ -58,12 +62,20 @@ module FakeS3
       end
     end
 
-    def get_object(bucket,object, request)
+    def delete_bucket(bucket_name)
+      bucket = get_bucket(bucket_name)
+      raise NoSuchBucket if !bucket
+      raise BucketNotEmpty if bucket.objects.count > 0
+      FileUtils.rm_f(get_bucket_folder(bucket))
+      @bucket_hash.delete(bucket_name)
+    end
+
+    def get_object(bucket,object_name, request)
       begin
         real_obj = S3Object.new
-        obj_root = File.join(@root,bucket,object,SHUCK_METADATA_DIR)
+        obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
         metadata = YAML.parse(File.open(File.join(obj_root,"metadata"),'rb').read)
-        real_obj.name = object
+        real_obj.name = object_name
         real_obj.md5 = metadata[:md5].value
         real_obj.content_type = metadata[:content_type] ? metadata[:content_type].value : "application/octet-stream"
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
@@ -78,14 +90,13 @@ module FakeS3
     def object_metadata(bucket,object)
     end
 
-    def copy_object(src_bucket,src_object,dst_bucket,dst_object)
-      src_root = File.join(@root,src_bucket,src_object,SHUCK_METADATA_DIR)
-      src_obj = S3Object.new
+    def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name)
+      src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
       src_metadata_filename = File.join(src_root,"metadata")
       src_metadata = YAML.parse(File.open(src_metadata_filename,'rb').read)
       src_content_filename = File.join(src_root,"content")
 
-      dst_filename= File.join(@root,dst_bucket,dst_object)
+      dst_filename= File.join(@root,dst_bucket_name,dst_name)
       FileUtils.mkdir_p(dst_filename)
 
       metadata_dir = File.join(dst_filename,SHUCK_METADATA_DIR)
@@ -106,9 +117,17 @@ module FakeS3
         end
       end
 
+      src_bucket = self.get_bucket(src_bucket_name)
+      dst_bucket = self.get_bucket(dst_bucket_name)
+
       obj = S3Object.new
+      obj.name = dst_name
       obj.md5 = src_metadata[:md5]
       obj.content_type = src_metadata[:content_type]
+
+      src_obj = src_bucket.find(src_name)
+      dst_bucket.add(obj)
+      src_bucket.remove(src_obj)
       return obj
     end
 
@@ -146,8 +165,7 @@ module FakeS3
         obj.md5 = metadata_struct[:md5]
         obj.content_type = metadata_struct[:content_type]
 
-        # TODO need a semaphore here since bucket is not probably not thread safe
-        bucket << obj
+        bucket.add(obj)
         return obj
       rescue
         puts $!
@@ -160,7 +178,8 @@ module FakeS3
       begin
         filename = File.join(@root,bucket.name,object_name)
         FileUtils.rm_rf(filename)
-        bucket.delete(object_name)
+        object = bucket.find(object_name)
+        bucket.remove(object)
       rescue
         puts $!
         $!.backtrace.each { |line| puts line }

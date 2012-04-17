@@ -1,6 +1,6 @@
 require 'test/test_helper'
 require 'fileutils'
-require 'fakes3/server'
+#require 'fakes3/server'
 require 'aws/s3'
 
 class S3CommandsTest < Test::Unit::TestCase
@@ -17,6 +17,23 @@ class S3CommandsTest < Test::Unit::TestCase
   def test_create_bucket
     bucket = Bucket.create("ruby_aws_s3")
     assert_not_nil bucket
+
+    bucket_names = []
+    Service.buckets.each do |bucket|
+      bucket_names << bucket.name
+    end
+    assert(bucket_names.index("ruby_aws_s3") >= 0)
+  end
+
+  def test_destroy_bucket
+    Bucket.create("deletebucket")
+    Bucket.delete("deletebucket")
+
+    begin
+      bucket = Bucket.find("deletebucket")
+      assert_fail("Shouldn't succeed here")
+    rescue
+    end
   end
 
   def test_store
@@ -102,11 +119,29 @@ class S3CommandsTest < Test::Unit::TestCase
     S3Object.store("something_to_delete","asdf","ruby_aws_s3")
     something = S3Object.find("something_to_delete","ruby_aws_s3")
     S3Object.delete("something_to_delete","ruby_aws_s3")
+
+    assert_raise AWS::S3::NoSuchKey do
+      should_throw = S3Object.find("something_to_delete","find_bucket")
+    end
+  end
+
+  def test_rename
+    bucket = Bucket.create("ruby_aws_s3")
+    S3Object.store("something_to_rename","asdf","ruby_aws_s3")
+    S3Object.rename("something_to_rename","renamed","ruby_aws_s3")
+
+    renamed = S3Object.find("renamed","ruby_aws_s3")
+    assert_not_nil(renamed)
+    assert_equal(renamed.value,'asdf')
+
+    assert_raise AWS::S3::NoSuchKey do
+      should_throw = S3Object.find("something_to_rename","ruby_aws_s3")
+    end
   end
 
   def test_larger_lists
     Bucket.create("ruby_aws_s3_many")
-    (0..100).each do |i|
+    (0..50).each do |i|
       ('a'..'z').each do |letter|
         name = "#{letter}#{i}"
         S3Object.store(name,"asdf","ruby_aws_s3_many")
@@ -114,9 +149,10 @@ class S3CommandsTest < Test::Unit::TestCase
     end
 
     bucket = Bucket.find("ruby_aws_s3_many")
-    assert_equal(bucket.objects.first.key,"a0")
     assert_equal(bucket.size,1000)
+    assert_equal(bucket.objects.first.key,"a0")
   end
+
 
   # Copying an object
   #S3Object.copy 'headshot.jpg', 'headshot2.jpg', 'photos'
