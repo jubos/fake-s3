@@ -3,14 +3,15 @@ require 'rake/testtask'
 include Rake::DSL
 Bundler::GemHelper.install_tasks
 
-Rake::TestTask.new(:test) do |t|
-  t.libs << "."
-  t.test_files = FileList['test/*_test.rb']
+namespace :test do
+  Rake::TestTask.new(:runner) do |t|
+    t.libs << "."
+    t.test_files = FileList['test/*_test.rb']
+  end
 end
 
-desc "Run the test_server"
-task :test_server do |t|
-  system("bundle exec bin/fakes3 --port 10453 --root test_root")
+task :test do
+  system("bundle exec foreman start")
 end
 
 task :default => :test
