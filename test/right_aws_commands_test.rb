@@ -24,7 +24,7 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     obj = @s3.get("s3media","helloworld")
     assert_equal "Hello World Man!",obj[:object]
 
-    obj = @s3.get("s3media","helloworld", )
+    obj = @s3.get("s3media","helloworld")
   end
 
   def test_large_store

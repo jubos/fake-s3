@@ -124,7 +124,7 @@ class S3CommandsTest < Test::Unit::TestCase
     S3Object.delete("something_to_delete","ruby_aws_s3")
 
     assert_raise AWS::S3::NoSuchKey do
-      should_throw = S3Object.find("something_to_delete","find_bucket")
+      should_throw = S3Object.find("something_to_delete","ruby_aws_s3")
     end
   end
 

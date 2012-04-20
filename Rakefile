@@ -1,3 +1,4 @@
+require 'rubygems'
 require 'bundler'
 require 'rake/testtask'
 include Rake::DSL
