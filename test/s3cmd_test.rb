@@ -1,13 +1,10 @@
 require 'test/test_helper'
 require 'fileutils'
 
-# You need to have s3cmd installed to use this
-# Also, s3cmd doesn't support path style requests, so in order to properly test
-# it you need to modify your dns by changing /etc/hosts or using dnsmasq
 class S3CmdTest < Test::Unit::TestCase
-
   def setup
     config = File.expand_path(File.join(File.dirname(__FILE__),'local_s3_cfg'))
+    raise "Please install s3cmd" if `which s3cmd`.empty?
     @s3cmd = "s3cmd --config #{config}"
   end
 
@@ -52,5 +49,4 @@ class S3CmdTest < Test::Unit::TestCase
 
   def test_intra_bucket_copy
   end
-
 end

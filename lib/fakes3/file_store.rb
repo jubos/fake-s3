@@ -75,15 +75,16 @@ module FakeS3
       begin
         real_obj = S3Object.new
         obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
-        metadata = YAML.parse(File.open(File.join(obj_root,"metadata"),'rb').read)
+        metadata = YAML.load(File.open(File.join(obj_root,"metadata"),'rb'))
         real_obj.name = object_name
-        real_obj.md5 = metadata[:md5].value
-        real_obj.content_type = metadata[:content_type] ? metadata[:content_type].value : "application/octet-stream"
+        real_obj.md5 = metadata[:md5]
+        real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
         real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
         return real_obj
       rescue
         puts $!
+        $!.backtrace.each { |line| puts line }
         return nil
       end
     end
@@ -94,7 +95,7 @@ module FakeS3
     def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name)
       src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
       src_metadata_filename = File.join(src_root,"metadata")
-      src_metadata = YAML.parse(File.open(src_metadata_filename,'rb').read)
+      src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)
       src_content_filename = File.join(src_root,"content")
 
       dst_filename= File.join(@root,dst_bucket_name,dst_name)

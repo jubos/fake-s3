@@ -1,6 +1,5 @@
 # -*- encoding: utf-8 -*-
-$:.push File.expand_path("../lib", __FILE__)
-require "fakes3/version"
+require File.join(File.dirname(__FILE__), 'lib', 'fakes3', 'version')
 
 Gem::Specification.new do |s|
   s.name        = "fakes3"
@@ -17,6 +16,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency "bundler", ">= 1.0.0"
   s.add_development_dependency "aws-s3"
   s.add_development_dependency "right_aws"
+  s.add_development_dependency "rake"
+  s.add_development_dependency "foreman"
   #s.add_development_dependency "aws-sdk"
   #s.add_development_dependency "ruby-debug"
   #s.add_development_dependency "ruby-debug19"
