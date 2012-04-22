@@ -9,19 +9,15 @@ module FakeS3
     desc "server", "Run a server on a particular hostname"
     method_option :root, :type => :string, :aliases => '-r', :required => true
     method_option :port, :type => :numeric, :aliases => '-p', :required => true
-    method_option :hostname, :type => :string, :aliases => '-h', :desc => "The root name of the host.  Defaults to s3.amazonaws.com."
+    method_option :hostname, :type => :string, :aliases => '-h', :desc => "The root name of the host.  Defaults to 0.0.0.0"
     method_option :limit, :aliases => '-l', :type => :string, :desc => 'Rate limit for serving (ie. 50K, 1.0M)'
     def server
-      store = nil
-      if options[:root]
-        root = File.expand_path(options[:root])
-        # TODO Do some sanity checking here
-        store = FileStore.new(root)
-      end
-
-      if store.nil?
+      root = nil
+      if options[:root].nil?
         puts "You must specify a root to use a file store (the current default)"
         exit(-1)
+      else
+        root = File.expand_path(options[:root])
       end
 
       hostname = 's3.amazonaws.com'
@@ -43,7 +39,7 @@ module FakeS3
       end
 
       puts "Loading FakeS3 with #{root} on port #{options[:port]} with hostname #{hostname}"
-      server = FakeS3::Server.new(options[:port],store,hostname)
+      server = FakeS3::Server.new(options[:port],root,hostname)
       server.serve
     end
 

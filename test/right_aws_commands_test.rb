@@ -50,6 +50,7 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     obj = @s3.get("s3media","dir/right/123.txt") do |chunk|
       output << chunk
     end
+    
     assert_equal "recursive", output
   end
 
@@ -57,6 +58,7 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     @s3.put("s3media","original.txt","Hello World")
     @s3.copy("s3media","original.txt","s3media","copy.txt")
     obj = @s3.get("s3media","copy.txt")
+
     assert_equal "Hello World",obj[:object]
   end
 
