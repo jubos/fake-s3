@@ -153,13 +153,21 @@ module FakeS3
         md5 = Digest::MD5.new
         # TODO put a tmpfile here first and mv it over at the end
 
+        remaining_size = request.env["CONTENT_LENGTH"].to_i
+        buffer_size = 65536
+
         File.open(content,'wb') do |f|
           loop do
-            chunk = request.body.read(512)
-            break if chunk.nil? || chunk.empty?
-            
-            f << chunk
-            md5 << chunk
+            sz = remaining_size <= buffer_size ? remaining_size : buffer_size
+            chunk = request.body.read(sz)
+            remaining_size -= sz
+
+            if chunk
+              f << chunk
+              md5 << chunk
+            end
+
+            break if remaining_size <= 0
           end
         end
 
@@ -167,8 +175,9 @@ module FakeS3
         metadata_struct[:md5] = md5.hexdigest
         metadata_struct[:content_type] = request.media_type || ""
 
+        yaml = YAML::dump(metadata_struct)
         File.open(metadata,'w') do |f|
-          f << YAML::dump(metadata_struct)
+          f << yaml
         end
 
         obj = S3Object.new
