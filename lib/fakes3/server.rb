@@ -58,6 +58,10 @@ module FakeS3
       when 'LS_BUCKET'
         bucket_obj = @store.get_bucket(s_req.bucket)
         if bucket_obj
+          unless bucket_obj.opened
+            bucket_obj.objects = @store.get_sorted_object_list(bucket_obj)
+            bucket_obj.opened = true
+          end
           response.status = 200
           response['Content-Type'] = "application/xml"
           query = {

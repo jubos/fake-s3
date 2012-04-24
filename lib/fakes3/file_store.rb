@@ -53,6 +53,36 @@ module FakeS3
       @bucket_hash[bucket]
     end
 
+    def get_sorted_object_list(bucket)
+      list = SortedObjectList.new
+      for object in get_objects_under_path(bucket, "")
+        list.add(object)
+      end
+      return list
+    end
+
+    def get_objects_under_path(bucket, path)
+      objects = []
+      current = File.join(@root, bucket.name, path)
+      dir = Dir.new(current)
+      dir.each do |file|
+        next if file =~ /^\./
+        if path.empty?
+          new_path = file
+        else
+          new_path = File.join(path, file)
+        end
+        if File.directory?(File.join(current, file, SHUCK_METADATA_DIR))
+          objects.push(get_object(bucket.name, new_path, ""))
+        else
+          objects |= get_objects_under_path(bucket, new_path)
+        end
+      end
+
+      return objects
+    end
+    private :get_objects_under_path
+
     def create_bucket(bucket)
       FileUtils.mkdir_p(File.join(@root,bucket))
       bucket_obj = Bucket.new(bucket,Time.now,[])
