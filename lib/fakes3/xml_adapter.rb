@@ -124,7 +124,7 @@ module FakeS3
       objects.each do |s3_object|
         lbr.Contents { |contents|
           contents.Key(s3_object.name)
-          contents.LastModified(s3_object.creation_date)
+          contents.LastModified(s3_object.modified_date)
           contents.ETag("\"#{s3_object.md5}\"")
           contents.Size(s3_object.size)
           contents.StorageClass("STANDARD")
