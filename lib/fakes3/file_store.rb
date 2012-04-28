@@ -19,6 +19,12 @@ module FakeS3
         bucket_obj = Bucket.new(bucket_name,Time.now,[])
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
+
+        # FIXME: this is not the best place to do this
+        # Dir[File.join(bucket, "*")].each do |s3object|
+        #   obj = get_object(bucket_name, File.basename(s3object), nil)
+        #   bucket_obj.add obj
+        # end
       end
     end
 
@@ -147,19 +153,31 @@ module FakeS3
         md5 = Digest::MD5.new
         # TODO put a tmpfile here first and mv it over at the end
 
+        remaining_size = request.env["CONTENT_LENGTH"].to_i
+        buffer_size = 65536
+
         File.open(content,'wb') do |f|
-          request.body do |chunk|
-            f << chunk
-            md5 << chunk
+          loop do
+            sz = remaining_size <= buffer_size ? remaining_size : buffer_size
+            chunk = request.body.read(sz)
+            remaining_size -= sz
+
+            if chunk
+              f << chunk
+              md5 << chunk
+            end
+
+            break if remaining_size <= 0
           end
         end
 
         metadata_struct = {}
         metadata_struct[:md5] = md5.hexdigest
-        metadata_struct[:content_type] = request.header["content-type"].first
+        metadata_struct[:content_type] = request.media_type || ""
 
+        yaml = YAML::dump(metadata_struct)
         File.open(metadata,'w') do |f|
-          f << YAML::dump(metadata_struct)
+          f << yaml
         end
 
         obj = S3Object.new
