@@ -340,7 +340,7 @@ module FakeS3
                                         :SSLVerifyClient  => OpenSSL::SSL::VERIFY_NONE,
                                         :SSLCertificate   => @cert,
                                         :SSLPrivateKey    => @key,
-                                        :SSLCertName      => 'test')
+                                        :SSLCertName      => nil)
       @server.mount "/", Servlet, @store,@hostname
       trap "INT" do @server.shutdown end
       @server.start
