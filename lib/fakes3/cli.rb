@@ -11,6 +11,10 @@ module FakeS3
     method_option :port, :type => :numeric, :aliases => '-p', :required => true
     method_option :hostname, :type => :string, :aliases => '-h', :desc => "The root name of the host.  Defaults to s3.amazonaws.com."
     method_option :limit, :aliases => '-l', :type => :string, :desc => 'Rate limit for serving (ie. 50K, 1.0M)'
+    method_option :ssl, :aliases => '-s', :type => :boolean, :desc => 'Should SSL be used or not.'
+    method_option :key, :aliases => '-k', :type => :string, :desc => 'The Key for SSL encryption.'
+    method_option :cert, :aliases => '-c', :type => :string, :desc => 'The Certificate for SSL encryption.'
+
     def server
       store = nil
       if options[:root]
@@ -42,8 +46,43 @@ module FakeS3
         end
       end
 
+      enable_ssl = nil
+      if options[:ssl]
+        begin
+          enable_ssl = options[:ssl]
+        rescue
+          puts $!.message
+          exit(-1)
+        end  
+      end
+
+      key = nil
+      if options[:key]
+        begin
+          key = options[:key]
+        rescue
+          puts $!.message
+          exit(-1)
+        end  
+      end
+
+      cert = nil
+      if options[:cert]
+        begin
+          cert = options[:cert]
+        rescue
+          puts $!.message
+          exit(-1)
+        end  
+      end
+
+      if enable_ssl and (!key or !cert)
+        puts "If you want to use SSL, please provide both a key (-k) and a certificate (-c)."
+        exit(-1)
+      end
+
       puts "Loading FakeS3 with #{root} on port #{options[:port]} with hostname #{hostname}"
-      server = FakeS3::Server.new(options[:port],store,hostname)
+      server = FakeS3::Server.new(options[:port],store,hostname,enable_ssl,key,cert)
       server.serve
     end
 
