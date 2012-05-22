@@ -43,10 +43,10 @@ module FakeS3
         end
       end
 
-      options[:address] ||= '0.0.0.0'
+      address = options[:address] || '0.0.0.0'
 
       puts "Loading FakeS3 with #{root} on port #{options[:port]} with hostname #{hostname}"
-      server = FakeS3::Server.new(options[:address],options[:port],store,hostname)
+      server = FakeS3::Server.new(address,options[:port],store,hostname)
       server.serve
     end
 
