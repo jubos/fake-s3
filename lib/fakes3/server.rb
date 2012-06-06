@@ -316,14 +316,15 @@ module FakeS3
 
 
   class Server
-    def initialize(port,store,hostname)
+    def initialize(address,port,store,hostname)
+      @address = address
       @port = port
       @store = store
       @hostname = hostname
     end
 
     def serve
-      @server = WEBrick::HTTPServer.new(:Port => @port)
+      @server = WEBrick::HTTPServer.new(:BindAddress => @address, :Port => @port)
       @server.mount "/", Servlet, @store,@hostname
       trap "INT" do @server.shutdown end
       @server.start
