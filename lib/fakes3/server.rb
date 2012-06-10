@@ -90,7 +90,7 @@ module FakeS3
         stat = File::Stat.new(real_obj.io.path)
 
         response['Last-Modified'] = stat.mtime.to_s
-        response['Etag'] = real_obj.md5
+        response['Etag'] = "\"#{real_obj.md5}\""
         response['Accept-Ranges'] = "bytes"
         response['Last-Ranges'] = "bytes"
 
@@ -140,7 +140,7 @@ module FakeS3
         end
 
         real_obj = @store.store_object(bucket_obj,s_req.object,s_req.webrick_request)
-        response['Etag'] = real_obj.md5
+        response['Etag'] = "\"#{real_obj.md5}\""
       when Request::CREATE_BUCKET
         @store.create_bucket(s_req.bucket)
       end
