@@ -91,9 +91,14 @@ module FakeS3
 
         response.status = 200
         response['Content-Type'] = real_obj.content_type
-        content_length = File::Stat.new(real_obj.io.path).size
+        stat = File::Stat.new(real_obj.io.path)
+
+        response['Last-Modified'] = stat.mtime.to_s
         response['Etag'] = real_obj.md5
         response['Accept-Ranges'] = "bytes"
+        response['Last-Ranges'] = "bytes"
+
+        content_length = stat.size
 
         # Added Range Query support
         if range = request.header["range"].first
@@ -316,14 +321,15 @@ module FakeS3
 
 
   class Server
-    def initialize(port,store,hostname)
+    def initialize(address,port,store,hostname)
+      @address = address
       @port = port
       @store = store
       @hostname = hostname
     end
 
     def serve
-      @server = WEBrick::HTTPServer.new(:Port => @port)
+      @server = WEBrick::HTTPServer.new(:BindAddress => @address, :Port => @port)
       @server.mount "/", Servlet, @store,@hostname
       trap "INT" do @server.shutdown end
       @server.start
