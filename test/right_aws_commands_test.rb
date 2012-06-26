@@ -12,6 +12,8 @@ class RightAWSCommandsTest < Test::Unit::TestCase
   end
 
   def teardown
+    @s3.interface.delete("s3media", "last_modified")
+    @s3.interface.delete("s3media", "exists")
   end
 
   def test_create_bucket
@@ -28,16 +30,16 @@ class RightAWSCommandsTest < Test::Unit::TestCase
   end
 
   def test_header_last_modified
-    @s3.interface.put("s3media","foo","bar")
-    obj = @s3.interface.get("s3media","foo")
+    @s3.interface.put("s3media","last_modified","foo")
+    obj = @s3.interface.get("s3media","last_modified")
     assert_not_nil obj[:headers]["last-modified"]
   end
 
   def test_exists
-    key = @s3.bucket("s3media").key("foo")
-    !assert key.exists?
+    key = @s3.bucket("s3media").key("exists")
+    assert !key.exists?
 
-    key.data = 'bar'
+    key.data = 'foo'
     key.put
     assert key.exists?
   end
