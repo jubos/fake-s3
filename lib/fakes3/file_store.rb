@@ -17,8 +17,6 @@ module FakeS3
       Dir[File.join(root,"*")].each do |bucket|
         bucket_name = File.basename(bucket)
         bucket_obj = Bucket.new(bucket_name,Time.now,[])
-        puts 'BUCKET HASH'
-        puts bucket_obj
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
       end
