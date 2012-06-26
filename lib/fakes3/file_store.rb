@@ -198,6 +198,8 @@ module FakeS3
         obj.name = object_name
         obj.md5 = metadata_struct[:md5]
         obj.content_type = metadata_struct[:content_type]
+        obj.creation_date = File.ctime(metadata_dir)
+        obj.modified_date = File.mtime(File.join(metadata_dir,"content"))
 
         bucket.add(obj)
         return obj
