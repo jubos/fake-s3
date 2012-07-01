@@ -105,7 +105,7 @@ module FakeS3
       begin
         real_obj = S3Object.new
         obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
-        metadata = YAML.load(File.open(File.join(obj_root,"metadata"),'rb'))
+        metadata = YAML.load_file(File.join(obj_root,"metadata"))
         real_obj.name = object_name
         real_obj.md5 = metadata[:md5]
         real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
