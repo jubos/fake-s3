@@ -124,43 +124,22 @@ module FakeS3
     end
 
     def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name)
-      src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
-      src_metadata_filename = File.join(src_root,"metadata")
-      src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)
-      src_content_filename = File.join(src_root,"content")
+      obj = nil
+      if src_bucket_name == dst_bucket_name && src_name == dst_name
+        # source and destination are the same, nothing to do but
+        # find current object so it can be returned
+        obj = src_bucket.find(src_name)
+      else
+        src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
+        dst_root = File.join(@root,dst_bucket_name,dst_name,SHUCK_METADATA_DIR)
 
-      dst_filename= File.join(@root,dst_bucket_name,dst_name)
-      FileUtils.mkdir_p(dst_filename)
+        FileUtils.mkdir_p(dst_root)
+        FileUtils.copy_file(File.join(src_root,"content"),File.join(dst_root,"content"))
+        FileUtils.copy_file(File.join(src_root,"metadata"), File.join(dst_root,"metadata"))
 
-      metadata_dir = File.join(dst_filename,SHUCK_METADATA_DIR)
-      FileUtils.mkdir_p(metadata_dir)
-
-      content = File.join(metadata_dir,"content")
-      metadata = File.join(metadata_dir,"metadata")
-
-      File.open(content,'wb') do |f|
-        File.open(src_content_filename,'rb') do |input|
-          f << input.read
-        end
+        dst_bucket = self.get_bucket(dst_bucket_name)
+        dst_bucket.add(get_object(dst_bucket.name, dst_name, ""))
       end
-
-      File.open(metadata,'w') do |f|
-        File.open(src_metadata_filename,'r') do |input|
-          f << input.read
-        end
-      end
-
-      src_bucket = self.get_bucket(src_bucket_name)
-      dst_bucket = self.get_bucket(dst_bucket_name)
-
-      obj = S3Object.new
-      obj.name = dst_name
-      obj.md5 = src_metadata[:md5]
-      obj.content_type = src_metadata[:content_type]
-
-      src_obj = src_bucket.find(src_name)
-      dst_bucket.add(obj)
-      src_bucket.remove(src_obj)
       return obj
     end
 
