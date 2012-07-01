@@ -64,8 +64,7 @@ module FakeS3
     def get_objects_under_path(bucket, path)
       objects = []
       current = File.join(@root, bucket.name, path)
-      dir = Dir.new(current)
-      dir.each do |file|
+      Dir.entries(current).each do |file|
         next if file =~ /^\./
         if path.empty?
           new_path = file
