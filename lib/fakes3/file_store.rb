@@ -110,8 +110,9 @@ module FakeS3
         real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
         real_obj.io = RateLimitableFile.new(File.join(obj_root,"content"))
-        real_obj.creation_date = File.ctime(obj_root)
-        real_obj.modified_date = File.mtime(File.join(obj_root,"content"))
+        real_obj.size = metadata.fetch(:size) { 0 }
+        real_obj.creation_date = File.ctime(obj_root).iso8601()
+        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).iso8601() }
         return real_obj
       rescue
         puts $!
@@ -167,6 +168,8 @@ module FakeS3
         metadata_struct = {}
         metadata_struct[:md5] = md5.hexdigest
         metadata_struct[:content_type] = request.header["content-type"].first
+        metadata_struct[:size] = File.size(content)
+        metadata_struct[:modified_date] = File.mtime(content).iso8601()
 
         File.open(metadata,'w') do |f|
           f << YAML::dump(metadata_struct)
@@ -176,8 +179,9 @@ module FakeS3
         obj.name = object_name
         obj.md5 = metadata_struct[:md5]
         obj.content_type = metadata_struct[:content_type]
+        obj.size = metadata_struct[:size]
         obj.creation_date = File.ctime(metadata_dir)
-        obj.modified_date = File.mtime(File.join(metadata_dir,"content"))
+        obj.modified_date = metadata_struct[:modified_date]
 
         bucket.add(obj)
         return obj
