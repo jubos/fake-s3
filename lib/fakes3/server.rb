@@ -42,6 +42,7 @@ module FakeS3
     def initialize(server,store,hostname)
       super(server)
       @store = store
+      @store.logger = @logger
       @hostname = hostname
       @root_hostnames = [hostname,'localhost','s3.amazonaws.com','s3.localhost']
     end
