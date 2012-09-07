@@ -325,12 +325,26 @@ module FakeS3
       @enable_ssl = enable_ssl
       @key = nil
       if key != nil
-        @key = OpenSSL::PKey::RSA.new(File.open(key).read)
+        begin
+          @key = OpenSSL::PKey::RSA.new(File.open(key).read)
+        rescue
+          puts $!.message
+          exit(-1)
+        end
       end  
+      if not key.private?
+        puts "The key provided is not a private key."
+        exit(-1)
+      end
 
       @cert = nil
       if cert != nil
-        @cert = OpenSSL::X509::Certificate.new(File.open(cert).read)
+        begin
+          @cert = OpenSSL::X509::Certificate.new(File.open(cert).read)
+        rescue
+          puts $!.message
+          exit(-1)
+        end
       end
     end
 

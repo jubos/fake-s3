@@ -82,6 +82,9 @@ module FakeS3
       end
 
       puts "Loading FakeS3 with #{root} on port #{options[:port]} with hostname #{hostname}"
+      if enable_ssl
+        puts "using the certificate #{cert} and key #{key} for SSL."
+      end
       server = FakeS3::Server.new(options[:port],store,hostname,enable_ssl,key,cert)
       server.serve
     end
