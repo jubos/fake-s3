@@ -9,6 +9,7 @@ module FakeS3
     desc "server", "Run a server on a particular hostname"
     method_option :root, :type => :string, :aliases => '-r', :required => true
     method_option :port, :type => :numeric, :aliases => '-p', :required => true
+    method_option :address, :type => :string, :aliases => '-a', :required => false, :desc => "Bind to this address. Defaults to 0.0.0.0"
     method_option :hostname, :type => :string, :aliases => '-h', :desc => "The root name of the host.  Defaults to s3.amazonaws.com."
     method_option :limit, :aliases => '-l', :type => :string, :desc => 'Rate limit for serving (ie. 50K, 1.0M)'
     method_option :ssl, :aliases => '-s', :type => :boolean, :desc => 'Should SSL be used or not.'
@@ -85,7 +86,10 @@ module FakeS3
       if enable_ssl
         puts "using the certificate #{cert} and key #{key} for SSL."
       end
-      server = FakeS3::Server.new(options[:port],store,hostname,enable_ssl,key,cert)
+      address = options[:address] || '0.0.0.0'
+
+      puts "Loading FakeS3 with #{root} on port #{options[:port]} with hostname #{hostname}"
+      server = FakeS3::Server.new(address,options[:port],store,hostname,enable_ssl,key,cert)
       server.serve
     end
 
