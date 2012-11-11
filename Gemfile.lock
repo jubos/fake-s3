@@ -29,4 +29,5 @@ DEPENDENCIES
   bundler (>= 1.0.0)
   fakes3!
   rake
+  rest-client
   right_aws
