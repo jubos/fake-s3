@@ -176,7 +176,7 @@ module FakeS3
       else
         response.status = success_action_status || 204
         if response.status=="201"
-          response.body= <<-eos
+          response.body= <<-eos.strip
             <?xml version="1.0" encoding="UTF-8"?>
             <PostResponse>
               <Location>http://somethinghere/#{key}</Location>
@@ -189,8 +189,6 @@ module FakeS3
       end
       response['Content-Type'] = 'text/xml'
       response['Access-Control-Allow-Origin']='*'
-      puts "response status is #{response.status}"
-      puts "response body is #{response.body}"
     end
 
     def do_DELETE(request,response)

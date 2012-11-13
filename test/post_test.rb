@@ -1,5 +1,4 @@
 require 'test/test_helper'
-require 'debugger'
 require 'rest-client'
 
 class PostTest < Test::Unit::TestCase
@@ -42,9 +41,9 @@ class PostTest < Test::Unit::TestCase
       'key'=>'uploads/12345/${filename}',
       'success_action_status'=>'201',
       'file'=>File.new(__FILE__,"rb")
-      ){ |response| 
+      ){ |response|
         assert_equal(response.code, 201)
-        assert_match(response.body, /uploads\/12345\/post_test.rb/)
+        assert_match(response.body, /^\<\?xml.*uploads\/12345\/post_test\.rb/m)
     }
   end
 
