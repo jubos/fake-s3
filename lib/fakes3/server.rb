@@ -203,7 +203,10 @@ module FakeS3
       path = webrick_req.path
       path_len = path.size
       query = webrick_req.query
-      if path == "/" and s_req.is_path_style
+      if path == "/" and query["prefix"]
+        s_req.type = Request::LS_BUCKET
+        s_req.query = query
+      elsif path == "/" and s_req.is_path_style
         s_req.type = Request::LIST_BUCKETS
       else
         if s_req.is_path_style
