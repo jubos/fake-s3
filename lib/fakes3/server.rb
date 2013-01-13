@@ -94,6 +94,10 @@ module FakeS3
         response['Accept-Ranges'] = "bytes"
         response['Last-Ranges'] = "bytes"
 
+        real_obj.custom_metadata.each do |header, value|
+          response.header['x-amz-meta-' + header] = value
+        end
+
         content_length = stat.size
 
         # Added Range Query support

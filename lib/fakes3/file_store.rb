@@ -84,6 +84,7 @@ module FakeS3
         real_obj.size = metadata.fetch(:size) { 0 }
         real_obj.creation_date = File.ctime(obj_root).iso8601()
         real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).iso8601() }
+        real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
         return real_obj
       rescue
         puts $!
@@ -164,6 +165,14 @@ module FakeS3
         metadata_struct[:content_type] = request.header["content-type"].first
         metadata_struct[:size] = File.size(content)
         metadata_struct[:modified_date] = File.mtime(content).iso8601()
+        metadata_struct[:custom_metadata] = {}
+
+        request.header.each do |key, value|
+          match = /^x-amz-meta-(.*)$/.match(key)
+          if match
+            metadata_struct[:custom_metadata][match[1]] = value.join(', ')
+          end
+        end
 
         File.open(metadata,'w') do |f|
           f << YAML::dump(metadata_struct)
