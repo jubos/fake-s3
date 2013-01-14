@@ -1,10 +1,11 @@
 require 'set'
 module FakeS3
   class S3MatchSet
-    attr_accessor :matches,:is_truncated
+    attr_accessor :matches,:is_truncated,:common_prefixes
     def initialize
       @matches = []
       @is_truncated = false
+      @common_prefixes = []
     end
   end
 
@@ -73,9 +74,45 @@ module FakeS3
         end
       end
 
+      if delimiter
+        if prefix
+          base_prefix = prefix
+        else
+          base_prefix = ""
+        end
+        prefix_offset = base_prefix.length
+      end
+
       count = 0
+      last_chunk = nil
       @sorted_set.each do |s3_object|
         if marker_found && (!prefix or s3_object.name.index(prefix) == 0)
+          if delimiter
+            name = s3_object.name
+            remainder = name.slice(prefix_offset, name.length)
+            chunks = remainder.split(delimiter, 2)
+            if chunks.length > 1
+              if (last_chunk != chunks[0])
+                # "All of the keys rolled up in a common prefix count as
+                # a single return when calculating the number of
+                # returns. See MaxKeys."
+                # (http://awsdocs.s3.amazonaws.com/S3/latest/s3-api.pdf)
+                count += 1
+                if count <= max_keys
+                  ms.common_prefixes << base_prefix + chunks[0] + delimiter
+                  last_chunk = chunks[0]
+                else
+                  is_truncated = true
+                  break
+                end
+              end
+
+              # Continue to the next key, since this one has a
+              # delimiter.
+              next
+            end
+          end
+
           count += 1
           if count <= max_keys
             ms.matches << s3_object

@@ -137,6 +137,14 @@ module FakeS3
       end
     end
 
+    def self.append_common_prefixes_to_list_bucket_result(lbr, prefixes)
+      return if prefixes.nil? or prefixes.size == 0
+
+      prefixes.each do |common_prefix|
+        lbr.CommonPrefixes { |contents| contents.Prefix(common_prefix) }
+      end
+    end
+
     def self.bucket_query(bucket_query)
       output = ""
       bucket = bucket_query.bucket
@@ -149,6 +157,7 @@ module FakeS3
         lbr.MaxKeys(bucket_query.max_keys)
         lbr.IsTruncated(bucket_query.is_truncated?)
         append_objects_to_list_bucket_result(lbr,bucket_query.matches)
+        append_common_prefixes_to_list_bucket_result(lbr, bucket_query.common_prefixes)
       }
       output
     end
@@ -189,6 +198,6 @@ module FakeS3
         result.ETag("\"#{object.md5}\"")
       }
       output
-    end    
+    end
   end
 end
