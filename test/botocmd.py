@@ -58,7 +58,7 @@ class FakeS3Cmd(object):
         args = list(args)
         path = args.pop()
         bucket_name, prefix = self._parse_uri(path)
-        bucket = self.conn.get_bucket(bucket_name)
+        bucket = self.conn.create_bucket(bucket_name)
         for src_file in args:
             key = Key(bucket)
             key.key = os.path.join(prefix, os.path.basename(src_file))
