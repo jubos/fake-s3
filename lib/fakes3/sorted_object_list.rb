@@ -92,7 +92,7 @@ module FakeS3
             remainder = name.slice(prefix_offset, name.length)
             chunks = remainder.split(delimiter, 2)
             if chunks.length > 1
-              if (last_chunk != chunks[0]):
+              if (last_chunk != chunks[0])
                 # "All of the keys rolled up in a common prefix count as
                 # a single return when calculating the number of
                 # returns. See MaxKeys."
