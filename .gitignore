@@ -3,3 +3,5 @@ pkg/*
 .bundle
 tmp
 test_root
+
+/.project
