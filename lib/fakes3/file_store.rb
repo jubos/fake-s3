@@ -153,7 +153,7 @@ module FakeS3
         # TODO put a tmpfile here first and mv it over at the end
 
         content_type = 'application/octet-stream'
-        if content.is_a?(WEBrick::HTTPRequest)
+        if request.is_a?(WEBrick::HTTPRequest)
           File.open(content,'wb') do |f|
             request.body do |chunk|
               f << chunk

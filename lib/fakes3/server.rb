@@ -152,7 +152,6 @@ module FakeS3
       response['Content-Type'] = "text/xml"
     end
 
-    # Posts aren't supported yet
     def do_POST(request,response)
       s_req = normalize_request(request)
       bucket_obj = @store.get_bucket(s_req.bucket)
