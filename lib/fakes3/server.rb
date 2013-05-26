@@ -19,6 +19,7 @@ module FakeS3
     MOVE = "MOVE"
     DELETE_OBJECT = "DELETE_OBJECT"
     DELETE_BUCKET = "DELETE_BUCKET"
+    POST = "POST"
 
     attr_accessor :bucket,:object,:type,:src_bucket,
                   :src_object,:method,:webrick_request,
@@ -153,6 +154,23 @@ module FakeS3
 
     # Posts aren't supported yet
     def do_POST(request,response)
+      s_req = normalize_request(request)
+      bucket_obj = @store.get_bucket(s_req.bucket)
+      if !bucket_obj
+        # Lazily create a bucket.  TODO fix this to return the proper error
+        bucket_obj = @store.create_bucket(s_req.bucket)
+      end
+
+      content = {
+          :content => s_req.query['file'],
+          :content_type  => s_req.query['Content-Type'].to_s
+      }
+      real_obj = @store.store_object(bucket_obj, s_req.object, content)
+      response['Etag'] = "\"#{real_obj.md5}\""
+
+      response.status = 201
+      response.body = ""
+      response['Content-Type'] = 'text/xml'
     end
 
     def do_DELETE(request,response)
@@ -274,6 +292,14 @@ module FakeS3
       s_req.webrick_request = webrick_req
     end
 
+    def normalize_post(webrick_req, s_req)
+      path = webrick_req.query['key']
+      path.sub!('${filename}', webrick_req.query['file'].filename)
+      s_req.object = path
+      s_req.query = webrick_req.query
+      s_req.type = Request::POST
+    end
+
     # This method takes a webrick request and generates a normalized FakeS3 request
     def normalize_request(webrick_req)
       host_header= webrick_req["Host"]
@@ -295,6 +321,8 @@ module FakeS3
         normalize_put(webrick_req,s_req)
       when 'GET','HEAD'
         normalize_get(webrick_req,s_req)
+      when 'POST'
+        normalize_post(webrick_req,s_req)
       when 'DELETE'
         normalize_delete(webrick_req,s_req)
       else
