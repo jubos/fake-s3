@@ -19,6 +19,7 @@ module FakeS3
     MOVE = "MOVE"
     DELETE_OBJECT = "DELETE_OBJECT"
     DELETE_BUCKET = "DELETE_BUCKET"
+    RESET_SERVER = "RESET_SERVER"
 
     attr_accessor :bucket,:object,:type,:src_bucket,
                   :src_object,:method,:webrick_request,
@@ -164,6 +165,8 @@ module FakeS3
         @store.delete_object(bucket_obj,s_req.object,s_req.webrick_request)
       when Request::DELETE_BUCKET
         @store.delete_bucket(s_req.bucket)
+      when Request::RESET_SERVER
+        @store.reset_store
       end
 
       response.status = 204
@@ -177,7 +180,8 @@ module FakeS3
       path_len = path.size
       query = webrick_req.query
       if path == "/" and s_req.is_path_style
-        # Probably do a 404 here
+        # Interpret this as a request to reset the server
+        s_req.type = Request::RESET_SERVER
       else
         if s_req.is_path_style
           elems = path[1,path_len].split("/")

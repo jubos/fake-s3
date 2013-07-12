@@ -41,6 +41,14 @@ module FakeS3
       end
     end
 
+    def reset_store
+      if File.exist?(@root)
+        FileUtils.rm_r(@root)
+      end
+      @bucket_hash = {}
+      @buckets = []
+    end
+
     def buckets
       @buckets
     end
@@ -69,6 +77,7 @@ module FakeS3
       raise BucketNotEmpty if bucket.objects.count > 0
       FileUtils.rm_r(get_bucket_folder(bucket))
       @bucket_hash.delete(bucket_name)
+      @buckets.delete(bucket)
     end
 
     def get_object(bucket,object_name, request)
