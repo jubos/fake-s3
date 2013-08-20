@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
 
+$: << './lib'
+
 require 'fakes3/cli'
 FakeS3::CLI.start
