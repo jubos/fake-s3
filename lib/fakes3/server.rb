@@ -213,10 +213,7 @@ module FakeS3
           elems = path.split("/")
         end
 
-        if elems.size == 0
-          # List buckets
-          s_req.type = Request::LIST_BUCKETS
-        elsif elems.size == 1
+        if elems.size < 2
           s_req.type = Request::LS_BUCKET
           s_req.query = query
         else
