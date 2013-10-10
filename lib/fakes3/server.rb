@@ -530,7 +530,11 @@ module FakeS3
 
     def serve
       @server.mount "/", Servlet, @store,@hostname
-      trap "INT" do @server.shutdown end
+
+      shutdown = proc { @server.shutdown }
+      trap "INT", &shutdown
+      trap "TERM", &shutdown
+
       @server.start
     end
 
