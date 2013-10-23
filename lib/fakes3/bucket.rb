@@ -5,7 +5,7 @@ require 'fakes3/sorted_object_list'
 
 module FakeS3
   class Bucket
-    attr_accessor :name,:creation_date,:objects
+    attr_accessor :name,:creation_date,:objects,:opened
 
     def initialize(name,creation_date,objects)
       @name = name
@@ -14,6 +14,7 @@ module FakeS3
       objects.each do |obj|
         @objects.add(obj)
       end
+      @opened = false
       @mutex = Mutex.new
     end
 

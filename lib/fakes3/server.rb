@@ -58,6 +58,10 @@ module FakeS3
       when 'LS_BUCKET'
         bucket_obj = @store.get_bucket(s_req.bucket)
         if bucket_obj
+          unless bucket_obj.opened
+            bucket_obj.objects = @store.get_sorted_object_list(bucket_obj)
+            bucket_obj.opened = true
+          end
           response.status = 200
           response['Content-Type'] = "application/xml"
           query = {
@@ -117,12 +121,12 @@ module FakeS3
             return
           end
         end
-        response['Content-Length'] = File::Stat.new(real_obj.io.path).size
+        response['Content-Length'] = content_length
         response['Last-Modified'] = real_obj.modified_date
         if s_req.http_verb == 'HEAD'
           response.body = ""
         else
-          response.body = real_obj.io
+          response.body = real_obj.io.read()
         end
       end
     end
@@ -132,7 +136,9 @@ module FakeS3
 
       case s_req.type
       when Request::COPY
+        bucket = @store.get_bucket(s_req.src_bucket)
         @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object)
+        @store.delete_object(bucket,s_req.src_object, "")
       when Request::STORE
         bucket_obj = @store.get_bucket(s_req.bucket)
         if !bucket_obj
@@ -160,8 +166,8 @@ module FakeS3
 
       case s_req.type
       when Request::DELETE_OBJECT
-        bucket_obj = @store.get_bucket(s_req.bucket)
-        @store.delete_object(bucket_obj,s_req.object,s_req.webrick_request)
+        bucket = @store.get_bucket(s_req.bucket)
+        @store.delete_object(bucket,s_req.object,s_req.webrick_request)
       when Request::DELETE_BUCKET
         @store.delete_bucket(s_req.bucket)
       end
