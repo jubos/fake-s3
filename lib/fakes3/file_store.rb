@@ -152,16 +152,26 @@ module FakeS3
         md5 = Digest::MD5.new
         # TODO put a tmpfile here first and mv it over at the end
 
-        File.open(content,'wb') do |f|
-          request.body do |chunk|
-            f << chunk
-            md5 << chunk
+        content_type = 'application/octet-stream'
+        if request.is_a?(WEBrick::HTTPRequest)
+          File.open(content,'wb') do |f|
+            request.body do |chunk|
+              f << chunk
+              md5 << chunk
+            end
           end
+          content_type = request.header["content-type"].first
+        else
+          File.open(content,'wb') do |f|
+            f << request[:content]
+            md5 << request[:content]
+          end
+          content_type = request[:content_type] if request[:content_type]
         end
 
         metadata_struct = {}
         metadata_struct[:md5] = md5.hexdigest
-        metadata_struct[:content_type] = request.header["content-type"].first
+        metadata_struct[:content_type] = content_type
         metadata_struct[:size] = File.size(content)
         metadata_struct[:modified_date] = File.mtime(content).iso8601()
 
