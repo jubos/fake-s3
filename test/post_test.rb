@@ -43,7 +43,7 @@ class PostTest < Test::Unit::TestCase
       'file'=>File.new(__FILE__,"rb")
       ){ |response|
         assert_equal(response.code, 201)
-        assert_match(response.body, /^\<\?xml.*uploads\/12345\/post_test\.rb/m)
+        assert_match(%r{^\<\?xml.*uploads/12345/post_test\.rb}m, response.body)
     }
   end
 
