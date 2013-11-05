@@ -81,7 +81,8 @@ module FakeS3
         real_obj = @store.get_object(s_req.bucket,s_req.object,request)
         if !real_obj
           response.status = 404
-          response.body = ""
+          response.body = XmlAdapter.error_no_such_key(s_req.object)
+          response['Content-Type'] = "application/xml"
           return
         end
 
