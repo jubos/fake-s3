@@ -130,9 +130,14 @@ module FakeS3
     def do_PUT(request,response)
       s_req = normalize_request(request)
 
+      response.status = 200
+      response.body = ""
+      response['Content-Type'] = "text/xml"
+
       case s_req.type
       when Request::COPY
-        @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object)
+        object = @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object)
+        response.body = XmlAdapter.copy_object_result(object)
       when Request::STORE
         bucket_obj = @store.get_bucket(s_req.bucket)
         if !bucket_obj
@@ -145,10 +150,6 @@ module FakeS3
       when Request::CREATE_BUCKET
         @store.create_bucket(s_req.bucket)
       end
-
-      response.status = 200
-      response.body = ""
-      response['Content-Type'] = "text/xml"
     end
 
     # Posts aren't supported yet
