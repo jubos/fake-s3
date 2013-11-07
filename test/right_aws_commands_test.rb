@@ -27,6 +27,16 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     obj = @s3.get("s3media","helloworld")
   end
 
+  def test_store_not_found
+    begin
+    obj = @s3.get("s3media","helloworldnotexist")
+    rescue RightAws::AwsError
+      assert $!.message.include?('NoSuchKey')
+    rescue
+      fail 'Should have caught NoSuchKey Exception'
+    end
+  end
+
   def test_large_store
     @s3.put("s3media","helloworld","Hello World Man!")
     buffer = ""
