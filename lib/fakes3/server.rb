@@ -182,7 +182,7 @@ module FakeS3
           response.body= <<-eos.strip
             <?xml version="1.0" encoding="UTF-8"?>
             <PostResponse>
-              <Location>http://localhost:#{@port}/#{key}</Location>
+              <Location>http://#{s_req.bucket}.localhost:#{@port}/#{key}</Location>
               <Bucket>#{s_req.bucket}</Bucket>
               <Key>#{key}</Key>
               <ETag>#{response['Etag']}</ETag>
