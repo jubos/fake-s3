@@ -95,7 +95,7 @@ module FakeS3
     def object_metadata(bucket,object)
     end
 
-    def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name)
+    def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name,request)
       src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
       src_metadata_filename = File.join(src_root,"metadata")
       src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)
@@ -110,15 +110,25 @@ module FakeS3
       content = File.join(metadata_dir,"content")
       metadata = File.join(metadata_dir,"metadata")
 
-      File.open(content,'wb') do |f|
-        File.open(src_content_filename,'rb') do |input|
-          f << input.read
+      if src_bucket_name != dst_bucket_name || src_name != dst_name
+        File.open(content,'wb') do |f|
+          File.open(src_content_filename,'rb') do |input|
+            f << input.read
+          end
+        end
+
+        File.open(metadata,'w') do |f|
+          File.open(src_metadata_filename,'r') do |input|
+            f << input.read
+          end
         end
       end
 
-      File.open(metadata,'w') do |f|
-        File.open(src_metadata_filename,'r') do |input|
-          f << input.read
+      metadata_directive = request.header["x-amz-metadata-directive"].first
+      if metadata_directive == "REPLACE"
+        metadata_struct = create_metadata(content,request)
+        File.open(metadata,'w') do |f|
+          f << YAML::dump(metadata_struct)
         end
       end
 
@@ -149,22 +159,15 @@ module FakeS3
         content = File.join(filename,SHUCK_METADATA_DIR,"content")
         metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
 
-        md5 = Digest::MD5.new
         # TODO put a tmpfile here first and mv it over at the end
 
         File.open(content,'wb') do |f|
           request.body do |chunk|
             f << chunk
-            md5 << chunk
           end
         end
 
-        metadata_struct = {}
-        metadata_struct[:md5] = md5.hexdigest
-        metadata_struct[:content_type] = request.header["content-type"].first
-        metadata_struct[:size] = File.size(content)
-        metadata_struct[:modified_date] = File.mtime(content).utc.iso8601()
-
+        metadata_struct = create_metadata(content,request)
         File.open(metadata,'w') do |f|
           f << YAML::dump(metadata_struct)
         end
@@ -196,6 +199,15 @@ module FakeS3
         $!.backtrace.each { |line| puts line }
         return nil
       end
+    end
+
+    def create_metadata(content,request)
+      metadata = {}
+      metadata[:md5] = Digest::MD5.file(content).hexdigest
+      metadata[:content_type] = request.header["content-type"].first
+      metadata[:size] = File.size(content)
+      metadata[:modified_date] = File.mtime(content).utc.iso8601()
+      return metadata
     end
   end
 end
