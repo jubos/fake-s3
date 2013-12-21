@@ -70,6 +70,24 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     assert_equal "Hello World",obj[:object]
   end
 
+  def test_copy_in_place
+    @s3.put("s3media","foo","Hello World")
+    @s3.copy("s3media","foo","s3media","foo")
+    obj = @s3.get("s3media","foo")
+    assert_equal "Hello World",obj[:object]
+  end
+
+  def test_copy_replace_metadata
+    @s3.put("s3media","foo","Hello World",{"content-type"=>"application/octet-stream"})
+    obj = @s3.get("s3media","foo")
+    assert_equal "Hello World",obj[:object]
+    assert_equal "application/octet-stream",obj[:headers]["content-type"]
+    @s3.copy("s3media","foo","s3media","foo",:replace,{"content-type"=>"text/plain"})
+    obj = @s3.get("s3media","foo")
+    assert_equal "Hello World",obj[:object]
+    assert_equal "text/plain",obj[:headers]["content-type"]
+  end
+
   def test_larger_lists
     @s3.create_bucket('right_aws_many')
     (0..50).each do |i|
