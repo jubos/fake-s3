@@ -137,7 +137,7 @@ module FakeS3
 
       case s_req.type
       when Request::COPY
-        object = @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object)
+        object = @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object,request)
         response.body = XmlAdapter.copy_object_result(object)
       when Request::STORE
         bucket_obj = @store.get_bucket(s_req.bucket)
@@ -257,7 +257,7 @@ module FakeS3
           else
             s_req.type = Request::STORE
           end
-          s_req.object = webrick_req.path
+          s_req.object = webrick_req.path[1..-1]
         end
       end
 
