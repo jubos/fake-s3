@@ -153,8 +153,44 @@ module FakeS3
       end
     end
 
-    # Posts aren't supported yet
     def do_POST(request,response)
+      # check that we've received file data
+      unless request.content_type =~ /^multipart\/form-data; boundary=(.+)/
+        raise WEBrick::HTTPStatus::BadRequest
+      end
+      s_req = normalize_request(request)
+      key=request.query['key']
+      success_action_redirect=request.query['success_action_redirect']
+      success_action_status=request.query['success_action_status']
+
+      filename = 'default'
+      filename = $1 if request.body =~ /filename="(.*)"/
+      key=key.gsub('${filename}', filename)
+      
+      bucket_obj = @store.get_bucket(s_req.bucket) || @store.create_bucket(s_req.bucket)
+      real_obj=@store.store_object(bucket_obj, key, s_req.webrick_request)
+      
+      response['Etag'] = "\"#{real_obj.md5}\""
+      response.body = ""
+      if success_action_redirect
+        response.status = 307
+        response['Location']=success_action_redirect
+      else
+        response.status = success_action_status || 204
+        if response.status=="201"
+          response.body= <<-eos.strip
+            <?xml version="1.0" encoding="UTF-8"?>
+            <PostResponse>
+              <Location>http://somethinghere/#{key}</Location>
+              <Bucket>#{s_req.bucket}</Bucket>
+              <Key>#{key}</Key>
+              <ETag>#{response['Etag']}</ETag>
+            </PostResponse>
+          eos
+        end
+      end
+      response['Content-Type'] = 'text/xml'
+      response['Access-Control-Allow-Origin']='*'
     end
 
     def do_DELETE(request,response)
@@ -171,6 +207,11 @@ module FakeS3
       response.status = 204
       response.body = ""
     end
+    
+    def do_OPTIONS(request, response)
+      super
+      response["Access-Control-Allow-Origin"]="*"
+    end  
 
     private
 
@@ -273,6 +314,15 @@ module FakeS3
       s_req.webrick_request = webrick_req
     end
 
+    def normalize_post(webrick_req,s_req)
+      path = webrick_req.path
+      path_len = path.size
+      
+      s_req.path = webrick_req.query['key']
+
+      s_req.webrick_request = webrick_req
+    end
+
     # This method takes a webrick request and generates a normalized FakeS3 request
     def normalize_request(webrick_req)
       host_header= webrick_req["Host"]
@@ -296,6 +346,8 @@ module FakeS3
         normalize_get(webrick_req,s_req)
       when 'DELETE'
         normalize_delete(webrick_req,s_req)
+      when 'POST'
+        normalize_post(webrick_req,s_req)
       else
         raise "Unknown Request"
       end

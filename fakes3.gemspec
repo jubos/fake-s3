@@ -16,10 +16,11 @@ Gem::Specification.new do |s|
   s.add_development_dependency "bundler", ">= 1.0.0"
   s.add_development_dependency "aws-s3"
   s.add_development_dependency "right_aws"
+  s.add_development_dependency "rest-client"
   s.add_development_dependency "rake"
   #s.add_development_dependency "aws-sdk"
   #s.add_development_dependency "ruby-debug"
-  #s.add_development_dependency "ruby-debug19"
+  #s.add_development_dependency "debugger"
   s.add_dependency "thor"
   s.add_dependency "builder"
 

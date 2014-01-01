@@ -15,6 +15,8 @@ GEM
     builder (3.2.2)
     mime-types (1.25)
     rake (10.1.0)
+    rest-client (1.6.7)
+      mime-types (>= 1.16)
     right_aws (3.1.0)
       right_http_connection (>= 1.2.5)
     right_http_connection (1.4.0)
@@ -29,4 +31,5 @@ DEPENDENCIES
   bundler (>= 1.0.0)
   fakes3!
   rake
+  rest-client
   right_aws
