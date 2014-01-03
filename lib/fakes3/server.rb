@@ -44,6 +44,7 @@ module FakeS3
       super(server)
       @store = store
       @hostname = hostname
+      @port = server.config[:Port]
       @root_hostnames = [hostname,'localhost','s3.amazonaws.com','s3.localhost']
     end
 
@@ -181,7 +182,7 @@ module FakeS3
           response.body= <<-eos.strip
             <?xml version="1.0" encoding="UTF-8"?>
             <PostResponse>
-              <Location>http://somethinghere/#{key}</Location>
+              <Location>http://#{s_req.bucket}.localhost:#{@port}/#{key}</Location>
               <Bucket>#{s_req.bucket}</Bucket>
               <Key>#{key}</Key>
               <ETag>#{response['Etag']}</ETag>
