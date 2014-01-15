@@ -96,6 +96,7 @@ module FakeS3
     end
 
     def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name,request)
+
       src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
       src_metadata_filename = File.join(src_root,"metadata")
       src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)
@@ -124,7 +125,7 @@ module FakeS3
         end
       end
 
-      metadata_directive = request.header["x-amz-metadata-directive"].first
+      metadata_directive = request.env["HTTP_X_AMZ_METADATA_DIRECTIVE"]
       if metadata_directive == "REPLACE"
         metadata_struct = create_metadata(content,request)
         File.open(metadata,'w') do |f|
@@ -159,9 +160,13 @@ module FakeS3
         content = File.join(filename,SHUCK_METADATA_DIR,"content")
         metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
 
+        md5 = Digest::MD5.new
         # TODO put a tmpfile here first and mv it over at the end
 
-        match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
+        remaining_size = request.env["CONTENT_LENGTH"].to_i
+        buffer_size = 65536
+
+        match=request.env["CONTENT_TYPE"].match(/^multipart\/form-data; boundary=(.+)/)
       	boundary = match[1] if match
         if boundary
           boundary = WEBrick::HTTPUtils::dequote(boundary)
@@ -172,14 +177,24 @@ module FakeS3
           end
         else
           File.open(content,'wb') do |f|
-            request.body do |chunk|
-              f << chunk
+            loop do
+              sz = remaining_size <= buffer_size ? remaining_size : buffer_size
+              chunk = request.body.read(sz)
+              remaining_size -= sz
+
+              if chunk
+                f << chunk
+                md5 << chunk
+              end
+
+              break if remaining_size <= 0
             end
           end
         end
         metadata_struct = create_metadata(content,request)
+        yaml = YAML::dump(metadata_struct)
         File.open(metadata,'w') do |f|
-          f << YAML::dump(metadata_struct)
+          f << yaml
         end
 
         obj = S3Object.new
@@ -214,7 +229,7 @@ module FakeS3
     def create_metadata(content,request)
       metadata = {}
       metadata[:md5] = Digest::MD5.file(content).hexdigest
-      metadata[:content_type] = request.header["content-type"].first
+      metadata[:content_type] = request.media_type || ""
       metadata[:size] = File.size(content)
       metadata[:modified_date] = File.mtime(content).utc.iso8601()
       return metadata

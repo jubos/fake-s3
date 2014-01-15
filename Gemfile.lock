@@ -3,6 +3,8 @@ PATH
   specs:
     fakes3 (0.1.5.2)
       builder
+      rack
+      thin
       thor
 
 GEM
@@ -13,13 +15,27 @@ GEM
       mime-types
       xml-simple
     builder (3.2.2)
+    coderay (1.1.0)
+    daemons (1.1.9)
+    eventmachine (1.0.3)
+    method_source (0.8.2)
     mime-types (1.25)
+    pry (0.9.12.4)
+      coderay (~> 1.0)
+      method_source (~> 0.8)
+      slop (~> 3.4)
+    rack (1.5.2)
     rake (10.1.0)
     rest-client (1.6.7)
       mime-types (>= 1.16)
     right_aws (3.1.0)
       right_http_connection (>= 1.2.5)
     right_http_connection (1.4.0)
+    slop (3.4.7)
+    thin (1.6.1)
+      daemons (>= 1.0.9)
+      eventmachine (>= 1.0.0)
+      rack (>= 1.0.0)
     thor (0.18.1)
     xml-simple (1.1.2)
 
@@ -30,6 +46,7 @@ DEPENDENCIES
   aws-s3
   bundler (>= 1.0.0)
   fakes3!
+  pry
   rake
   rest-client
   right_aws
