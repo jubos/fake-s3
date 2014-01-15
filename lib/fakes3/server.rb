@@ -345,6 +345,11 @@ module FakeS3
       path = webrick_req.path
       path_len = path.size
 
+      if s_req.is_path_style
+        elems = path[1,path_len].split("/")
+        s_req.bucket = elems[0]
+      end
+
       s_req.path = webrick_req.query['key']
 
       s_req.webrick_request = webrick_req
