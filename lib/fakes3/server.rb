@@ -179,7 +179,7 @@ module FakeS3
 
     def do_POST(request,response)
       # check that we've received file data
-      unless request.content_type =~ /^multipart\/form-data; boundary=(.+)/
+      unless request.content_type =~ /^multipart\/form-data; ?boundary=(.+)/
         raise WEBrick::HTTPStatus::BadRequest
       end
       s_req = normalize_request(request)
