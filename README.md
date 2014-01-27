@@ -34,6 +34,7 @@ Here is a running list of [supported clients](https://github.com/jubos/fake-s3/w
 ### Prerequisites
 * Install the boto library for python. See [here](https://github.com/boto/boto).
 * Install s3cmd from the [s3tools](http://s3tools.org/s3cmd) site.
+* Install [python-magic](https://github.com/ahupp/python-magic).
 
 Start the test server using
 
