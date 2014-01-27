@@ -50,6 +50,13 @@ module FakeS3
       @root_hostnames = [hostname,'localhost','s3.amazonaws.com','s3.localhost']
     end
 
+    def validate_request(request)
+      req = request.webrick_request
+      return if req.nil?
+      return if not req.header.has_key?('expect')
+      req.continue if req.header['expect'].first=='100-continue'
+    end
+
     def do_GET(request, response)
       s_req = normalize_request(request)
 
@@ -378,6 +385,8 @@ module FakeS3
       else
         raise "Unknown Request"
       end
+
+      validate_request(s_req)
 
       return s_req
     end
