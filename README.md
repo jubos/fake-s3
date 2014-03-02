@@ -43,6 +43,10 @@ python boto
 
     sudo apt-get install python-boto
 
+add the following line to /etc/hosts
+
+    127.0.1.1   posttest.localhost
+
 
 ## Running Tests
 
