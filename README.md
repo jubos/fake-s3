@@ -29,6 +29,21 @@ libraries out there, and please do mention if other clients work or not.
 
 Here is a running list of [supported clients](https://github.com/jubos/fake-s3/wiki/Supported-Clients "Supported Clients")
 
+## Install test dependencies
+
+s3cmd (not the gem)
+
+    echo "Installing S3cmd..."
+    wget -O- -q http://s3tools.org/repo/deb-all/stable/s3tools.key | sudo apt-key add -
+    sudo wget -O/etc/apt/sources.list.d/s3tools.list http://s3tools.org/repo/deb-all/stable/s3tools.list
+    sudo apt-get update && sudo apt-get install s3cmd
+    echo "Done"
+
+python boto
+
+    sudo apt-get install python-boto
+
+
 ## Running Tests
 
 Start the test server using
