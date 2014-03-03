@@ -16,7 +16,8 @@ module FakeS3
       @bucket_hash = {}
       Dir[File.join(root,"*")].each do |bucket|
         bucket_name = File.basename(bucket)
-        bucket_obj = Bucket.new(bucket_name,Time.now,[])
+        objects = objects_for_bucket(bucket_name)
+        bucket_obj = Bucket.new(bucket_name,Time.now,objects)
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
       end
@@ -162,7 +163,7 @@ module FakeS3
         # TODO put a tmpfile here first and mv it over at the end
 
         match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
-      	boundary = match[1] if match
+        boundary = match[1] if match
         if boundary
           boundary = WEBrick::HTTPUtils::dequote(boundary)
           filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
@@ -218,6 +219,29 @@ module FakeS3
       metadata[:size] = File.size(content)
       metadata[:modified_date] = File.mtime(content).utc.iso8601()
       return metadata
+    end
+
+    private
+
+    def objects_for_bucket(bucket_name)
+      bucket_dir = File.join @root, bucket_name
+      discover_object_names(bucket_dir, '').map do |object_name|
+        get_object(bucket_name, object_name, nil)
+      end
+    end
+
+    def discover_object_names(dir, prefix)
+      names = []
+      metadata_dir = File.join dir,SHUCK_METADATA_DIR
+      if Dir.exists? metadata_dir
+        names << prefix
+      end
+      Dir[File.join(dir,'*')].select{|file| File.directory? file}.each do |dir|
+        dir_name = File.basename dir
+        new_prefix = prefix.empty? ? dir_name : "#{prefix}/#{dir_name}"
+        names += discover_object_names(dir, new_prefix)
+      end
+      names
     end
   end
 end
