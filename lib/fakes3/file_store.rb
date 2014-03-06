@@ -16,7 +16,8 @@ module FakeS3
       @bucket_hash = {}
       Dir[File.join(root,"*")].each do |bucket|
         bucket_name = File.basename(bucket)
-        objects = objects_for_bucket(bucket_name)
+        #objects = objects_for_bucket(bucket_name)
+        objects = []
         bucket_obj = Bucket.new(bucket_name,Time.now,objects)
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
@@ -83,8 +84,9 @@ module FakeS3
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
         real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
         real_obj.size = metadata.fetch(:size) { 0 }
-        real_obj.creation_date = File.ctime(obj_root).utc.iso8601()
-        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).utc.iso8601() }
+        real_obj.creation_date = File.ctime(obj_root).iso8601()
+        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).iso8601() }
+        real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
         return real_obj
       rescue
         puts $!
@@ -218,7 +220,15 @@ module FakeS3
       metadata[:content_type] = request.header["content-type"].first
       metadata[:size] = File.size(content)
       metadata[:modified_date] = File.mtime(content).utc.iso8601()
-      return metadata
+      metadata[:custom_metadata] = {}
+
+      request.header.each do |key, value|
+        match = /^x-amz-meta-(.*)$/.match(key)
+        if match
+          metadata[:custom_metadata][match[1]] = value.join(', ')
+        end
+      end      
+      metadata
     end
 
     private

@@ -67,6 +67,49 @@ class S3CommandsTest < Test::Unit::TestCase
     assert_equal buf_len,output.size
   end
 
+  def test_metadata_store
+    assert_equal true, Bucket.create("ruby_aws_s3")
+    bucket = Bucket.find("ruby_aws_s3")
+
+    # Note well: we can't seem to access obj.metadata until we've stored
+    # the object and found it again. Thus the store, find, store
+    # runaround below.
+    obj = bucket.new_object(:value => "foo")
+    obj.key = "key_with_metadata"
+    obj.store
+    obj = S3Object.find("key_with_metadata", "ruby_aws_s3")
+    obj.metadata[:param1] = "one"
+    obj.metadata[:param2] = "two, three"
+    obj.store
+    obj = S3Object.find("key_with_metadata", "ruby_aws_s3")
+
+    assert_equal "one", obj.metadata[:param1]
+    assert_equal "two, three", obj.metadata[:param2]
+  end
+
+  def test_metadata_copy
+    assert_equal true, Bucket.create("ruby_aws_s3")
+    bucket = Bucket.find("ruby_aws_s3")
+
+    # Note well: we can't seem to access obj.metadata until we've stored
+    # the object and found it again. Thus the store, find, store
+    # runaround below.
+    obj = bucket.new_object(:value => "foo")
+    obj.key = "key_with_metadata"
+    obj.store
+    obj = S3Object.find("key_with_metadata", "ruby_aws_s3")
+    obj.metadata[:param1] = "one"
+    obj.metadata[:param2] = "two, three"
+    obj.store
+
+    S3Object.copy("key_with_metadata", "key_with_metadata2", "ruby_aws_s3")
+    obj = S3Object.find("key_with_metadata2", "ruby_aws_s3")
+
+    assert_equal "one", obj.metadata[:param1]
+    assert_equal "two, three", obj.metadata[:param2]
+  end
+
+
   def test_multi_directory
     bucket = Bucket.create("ruby_aws_s3")
     S3Object.store("dir/myfile/123.txt","recursive","ruby_aws_s3")
