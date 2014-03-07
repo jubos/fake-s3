@@ -16,8 +16,7 @@ module FakeS3
       @bucket_hash = {}
       Dir[File.join(root,"*")].each do |bucket|
         bucket_name = File.basename(bucket)
-        #objects = objects_for_bucket(bucket_name)
-        objects = []
+        objects = objects_for_bucket(bucket_name)
         bucket_obj = Bucket.new(bucket_name,Time.now,objects)
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
@@ -87,6 +86,7 @@ module FakeS3
         real_obj.creation_date = File.ctime(obj_root).iso8601()
         real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).iso8601() }
         real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
+        real_obj.storage_class = metadata[:storage_class]
         return real_obj
       rescue
         puts $!
@@ -191,6 +191,8 @@ module FakeS3
         obj.content_type = metadata_struct[:content_type]
         obj.size = metadata_struct[:size]
         obj.modified_date = metadata_struct[:modified_date]
+        obj.storage_class = metadata_struct[:storage_class]
+        obj.custom_metadata = metadata_struct[:custom_metadata]
 
         bucket.add(obj)
         return obj
@@ -220,7 +222,7 @@ module FakeS3
       metadata[:content_type] = request.header["content-type"].first
       metadata[:size] = File.size(content)
       metadata[:modified_date] = File.mtime(content).utc.iso8601()
-      metadata[:custom_metadata] = {}
+      metadata[:storage_class] = S3Object::StorageClass::STANDARD
 
       request.header.each do |key, value|
         match = /^x-amz-meta-(.*)$/.match(key)
@@ -230,6 +232,18 @@ module FakeS3
       end      
       metadata
     end
+
+    def list_all
+      list = ["BUCKET\tOBJECT_NAME\tSTORAGE_CLASS"]
+      buckets.each do |bucket|
+        bucket.objects.list({}).matches.each do |object|
+          list << "#{bucket.name}\t#{object.name}\t#{object.storage_class}"
+        end
+      end
+      list.join "\n"
+    end
+
+
 
     private
 

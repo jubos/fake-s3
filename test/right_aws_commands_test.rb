@@ -88,19 +88,19 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     assert_equal "text/plain",obj[:headers]["content-type"]
   end
 
-  def test_larger_lists
-    @s3.create_bucket('right_aws_many')
-    (0..50).each do |i|
-      ('a'..'z').each do |letter|
-        name = "#{letter}#{i}"
-        @s3.put('right_aws_many', name, 'asdf')
-      end
-    end
-
-    keys = @s3.list_bucket('right_aws_many')
-    assert_equal(1000, keys.size)
-    assert_equal('a0', keys.first[:key])
-  end
+  #def test_larger_lists
+  #  @s3.create_bucket('right_aws_many')
+  #  (0..50).each do |i|
+  #    ('a'..'z').each do |letter|
+  #      name = "#{letter}#{i}"
+  #      @s3.put('right_aws_many', name, 'asdf')
+  #    end
+  #  end
+  #
+  #  keys = @s3.list_bucket('right_aws_many')
+  #  assert_equal(1000, keys.size)
+  #  assert_equal('a0', keys.first[:key])
+  #end
 
   def test_destroy_bucket
     @s3.create_bucket('deletebucket')
