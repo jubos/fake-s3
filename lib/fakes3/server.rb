@@ -20,6 +20,11 @@ module FakeS3
     MOVE = "MOVE"
     DELETE_OBJECT = "DELETE_OBJECT"
     DELETE_BUCKET = "DELETE_BUCKET"
+    ADMIN_LIST_ALL = 'ADMIN_LIST_ALL'
+    ADMIN_TO_GLACIER = "ADMIN_TO_GLACIER"
+    ADMIN_TO_STANDARD = "ADMIN_TO_STANDARD"
+    ADMIN_TO_RESTORED_FROM_GLACIER = "ADMIN_TO_RESTORED_FROM_GLACIER"
+    ADMIN_TO_RESTORING_IN_PROGRESS = "ADMIN_TO_RESTORING_IN_PROGRESS"
 
     attr_accessor :bucket,:object,:type,:src_bucket,
                   :src_object,:method,:webrick_request,
@@ -36,6 +41,10 @@ module FakeS3
       puts "Src Object: #{@src_object}"
       puts "Query: #{@query}"
       puts "-----Done"
+    end
+
+    def is_admin_control
+      bucket == 'ADMIN_CONTROL'
     end
   end
 
@@ -130,6 +139,8 @@ module FakeS3
         else
           response.body = real_obj.io
         end
+      when Request::ADMIN_LIST_ALL
+        response.body = @store.list_all
       end
     end
 
@@ -155,6 +166,14 @@ module FakeS3
         response.header['ETag'] = "\"#{real_obj.md5}\""
       when Request::CREATE_BUCKET
         @store.create_bucket(s_req.bucket)
+      when Request::ADMIN_TO_GLACIER
+        @store.to_glacier s_req.bucket, s_req.object
+      when Request::ADMIN_TO_STANDARD
+        @store.to_standard s_req.bucket, s_req.object
+      when Request::ADMIN_TO_RESTORED_FROM_GLACIER
+        @store.to_restored_from_glacier s_req.bucket, s_req.object
+      when Request::ADMIN_TO_RESTORING_IN_PROGRESS
+        @store.to_restoring_in_progress s_req.bucket, s_req.object
       end
     end
 
@@ -261,7 +280,9 @@ module FakeS3
           elems = path.split("/")
         end
 
-        if elems.size < 2
+        if s_req.is_admin_control
+          s_req.type = Request::ADMIN_LIST_ALL
+        elsif elems.size < 2
           s_req.type = Request::LS_BUCKET
           s_req.query = query
         else
@@ -287,7 +308,21 @@ module FakeS3
         if s_req.is_path_style
           elems = path[1,path_len].split("/")
           s_req.bucket = elems[0]
-          if elems.size == 1
+          if s_req.is_admin_control
+            op = elems[1]
+            s_req.bucket = elems[2]
+            s_req.object = elems[3,elems.size].join('/')
+            case op
+              when 'TO_GLACIER'
+                s_req.type = Request::ADMIN_TO_GLACIER
+              when 'TO_STANDARD'
+                s_req.type = Request::ADMIN_TO_STANDARD
+              when 'TO_RESTORED'
+                s_req.type = Request::ADMIN_TO_RESTORED_FROM_GLACIER
+              when 'TO_RESTORING'
+                s_req.type = Request::ADMIN_TO_RESTORING_IN_PROGRESS
+            end
+          elsif elems.size == 1
             s_req.type = Request::CREATE_BUCKET
           else
             if webrick_req.request_line =~ /\?acl/

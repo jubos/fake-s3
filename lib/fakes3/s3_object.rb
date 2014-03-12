@@ -1,7 +1,7 @@
 module FakeS3
   class S3Object
     include Comparable
-    attr_accessor :name,:size,:creation_date,:modified_date,:md5,:io,:content_type,:storage_class,:custom_metadata
+    attr_accessor :name,:size,:creation_date,:modified_date,:md5,:io,:content_type, :storage_class, :restore_expiration_date, :custom_metadata
     module StorageClass
       STANDARD = 'STANDARD'
       REDUCED_REDUNDANCY = 'REDUCED_REDUNDANCY'

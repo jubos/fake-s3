@@ -236,16 +236,59 @@ module FakeS3
     def list_all
       list = ["BUCKET\tOBJECT_NAME\tSTORAGE_CLASS"]
       buckets.each do |bucket|
-        bucket.objects.list({}).matches.each do |object|
+        bucket.objects.list({}).matches.collect(&:name).each do |object_name|
+          object = get_object bucket.name, object_name, nil
           list << "#{bucket.name}\t#{object.name}\t#{object.storage_class}"
         end
       end
       list.join "\n"
     end
 
+    def to_glacier(bucket, object_name)
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = S3Object::StorageClass::GLACIER
+      store_metadata(bucket, object_name, metadata)
+    end
 
+    def to_standard(bucket, object_name)
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = S3Object::StorageClass::STANDARD
+      store_metadata(bucket, object_name, metadata)
+    end
+
+    def to_restored_from_glacier(bucket, object_name)
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = S3Object::StorageClass::STANDARD
+      tomorrow = (Time.now + 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
+      value = "ongoing-request=\"false\", expiry-date=\"#{tomorrow}\""
+      metadata[:custom_metadata] = (metadata[:custom_metadata] || {}).merge restore: value
+      store_metadata(bucket, object_name, metadata)
+    end
+
+    def to_restoring_in_progress(bucket, object_name)
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = S3Object::StorageClass::GLACIER
+      value = 'ongoing-request="true"'
+      metadata[:custom_metadata] = (metadata[:custom_metadata] || {}).merge restore: value
+      store_metadata(bucket, object_name, metadata)
+    end
 
     private
+
+    def load_metadata(bucket, object_name)
+      YAML.load(File.open(metadata_file(bucket, object_name),'rb'))
+    end
+
+    def store_metadata(bucket, object_name, metadata)
+      File.open(metadata_file(bucket, object_name),'w') do |f|
+        f << YAML::dump(metadata)
+      end
+    end
+
+    def metadata_file(bucket, object_name)
+      obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
+       File.join(obj_root, "metadata")
+    end
 
     def objects_for_bucket(bucket_name)
       bucket_dir = File.join @root, bucket_name
