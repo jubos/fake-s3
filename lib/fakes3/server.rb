@@ -24,6 +24,7 @@ module FakeS3
     ADMIN_TO_GLACIER = "ADMIN_TO_GLACIER"
     ADMIN_TO_STANDARD = "ADMIN_TO_STANDARD"
     ADMIN_TO_RESTORED_FROM_GLACIER = "ADMIN_TO_RESTORED_FROM_GLACIER"
+    ADMIN_TO_RESTORED_EXPIRED = "ADMIN_TO_RESTORED_EXPIRED"
     ADMIN_TO_RESTORING_IN_PROGRESS = "ADMIN_TO_RESTORING_IN_PROGRESS"
 
     attr_accessor :bucket,:object,:type,:src_bucket,
@@ -105,7 +106,20 @@ module FakeS3
         response.header['ETag'] = "\"#{real_obj.md5}\""
         response['Accept-Ranges'] = "bytes"
         response['Last-Ranges'] = "bytes"
-
+        yesterday = (Time.now - 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
+        tomorrow = (Time.now + 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
+        next_week = (Time.now + 7 * 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
+        case real_obj.state
+          when S3Object::State::IN_GLACIER
+            response['x-amz-restore'] = "ongoing-request=\"false\""
+          when S3Object::State::RESTORING
+            response['x-amz-restore'] = "ongoing-request=\"true\""
+          when S3Object::State::RESTORED
+            response['x-amz-restore'] = "ongoing-request=\"false\", expiry-date=\"#{tomorrow}\""
+          when S3Object::State::RESTORED_COPY_EXPIRED
+            response['x-amz-restore'] = "ongoing-request=\"false\", expiry-date=\"#{yesterday}\""
+        end
+        response['x-amz-expiration'] = "expiry-date=\"#{next_week}\", rule-id=\"some_rule\""
         real_obj.custom_metadata.each do |header, value|
           response.header['x-amz-meta-' + header] = value
         end
@@ -172,6 +186,8 @@ module FakeS3
         @store.to_standard s_req.bucket, s_req.object
       when Request::ADMIN_TO_RESTORED_FROM_GLACIER
         @store.to_restored_from_glacier s_req.bucket, s_req.object
+      when Request::ADMIN_TO_RESTORED_EXPIRED
+        @store.to_restored_expired s_req.bucket, s_req.object
       when Request::ADMIN_TO_RESTORING_IN_PROGRESS
         @store.to_restoring_in_progress s_req.bucket, s_req.object
       end
@@ -319,6 +335,8 @@ module FakeS3
                 s_req.type = Request::ADMIN_TO_STANDARD
               when 'TO_RESTORED'
                 s_req.type = Request::ADMIN_TO_RESTORED_FROM_GLACIER
+              when 'TO_RESTORED_EXPIRED'
+                s_req.type = Request::ADMIN_TO_RESTORED_EXPIRED
               when 'TO_RESTORING'
                 s_req.type = Request::ADMIN_TO_RESTORING_IN_PROGRESS
             end

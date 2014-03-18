@@ -87,6 +87,7 @@ module FakeS3
         real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).iso8601() }
         real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
         real_obj.storage_class = metadata[:storage_class]
+        real_obj.state = metadata[:state]
         return real_obj
       rescue
         puts $!
@@ -193,6 +194,7 @@ module FakeS3
         obj.modified_date = metadata_struct[:modified_date]
         obj.storage_class = metadata_struct[:storage_class]
         obj.custom_metadata = metadata_struct[:custom_metadata]
+        obj.state = metadata_struct[:state]
 
         bucket.add(obj)
         return obj
@@ -223,6 +225,7 @@ module FakeS3
       metadata[:size] = File.size(content)
       metadata[:modified_date] = File.mtime(content).utc.iso8601()
       metadata[:storage_class] = S3Object::StorageClass::STANDARD
+      metadata[:state] = S3Object::State::IN_STANDARD
 
       request.header.each do |key, value|
         match = /^x-amz-meta-(.*)$/.match(key)
@@ -234,42 +237,76 @@ module FakeS3
     end
 
     def list_all
-      list = ["BUCKET\tOBJECT_NAME\tSTORAGE_CLASS"]
+      list = [%w(BUCKET OBJECT_NAME STORAGE_CLASS STATE)]
       buckets.each do |bucket|
         bucket.objects.list({}).matches.collect(&:name).each do |object_name|
           object = get_object bucket.name, object_name, nil
-          list << "#{bucket.name}\t#{object.name}\t#{object.storage_class}"
+          list << [bucket.name, object.name, object.storage_class, object.state]
         end
       end
+      maxes = [0, 0, 0, 0]
+      list.each{|row| row.each_with_index{|col, index| maxes[index] = [col.size, row[index].size].max}}
+      maxes.map!{|e| e + 1}
+      list.map!{|row|
+        index = -1
+        row.map{|val|
+          val.ljust(maxes[index+=1])}.join "\t"
+      }
       list.join "\n"
     end
 
     def to_glacier(bucket, object_name)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::GLACIER
+      obj.state = S3Object::State::IN_GLACIER
       metadata = load_metadata bucket, object_name
-      metadata[:storage_class] = S3Object::StorageClass::GLACIER
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
       store_metadata(bucket, object_name, metadata)
     end
 
     def to_standard(bucket, object_name)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::STANDARD
       metadata = load_metadata bucket, object_name
-      metadata[:storage_class] = S3Object::StorageClass::STANDARD
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
       store_metadata(bucket, object_name, metadata)
     end
 
     def to_restored_from_glacier(bucket, object_name)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::GLACIER
+      obj.state = S3Object::State::RESTORED
       metadata = load_metadata bucket, object_name
-      metadata[:storage_class] = S3Object::StorageClass::STANDARD
-      tomorrow = (Time.now + 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
-      value = "ongoing-request=\"false\", expiry-date=\"#{tomorrow}\""
-      metadata[:custom_metadata] = (metadata[:custom_metadata] || {}).merge restore: value
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
       store_metadata(bucket, object_name, metadata)
     end
 
-    def to_restoring_in_progress(bucket, object_name)
+    #tomorrow = (Time.now + 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
+    #value = "ongoing-request=\"false\", expiry-date=\"#{tomorrow}\""
+
+    def to_restored_expired(bucket, object_name)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::STANDARD
+      obj.state = S3Object::State::RESTORED_COPY_EXPIRED
       metadata = load_metadata bucket, object_name
-      metadata[:storage_class] = S3Object::StorageClass::GLACIER
-      value = 'ongoing-request="true"'
-      metadata[:custom_metadata] = (metadata[:custom_metadata] || {}).merge restore: value
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
+      store_metadata(bucket, object_name, metadata)
+    end
+
+    #tomorrow = (Time.now + 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
+    #value = "ongoing-request=\"false\", expiry-date=\"#{tomorrow}\""
+
+    def to_restoring_in_progress(bucket, object_name)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::GLACIER
+      obj.state = S3Object::State::RESTORING
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
       store_metadata(bucket, object_name, metadata)
     end
 
