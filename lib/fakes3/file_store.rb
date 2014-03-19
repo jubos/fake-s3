@@ -268,6 +268,7 @@ module FakeS3
     def to_standard(bucket, object_name)
       obj = get_bucket(bucket).find(object_name)
       obj.storage_class = S3Object::StorageClass::STANDARD
+      obj.state = S3Object::State::IN_STANDARD
       metadata = load_metadata bucket, object_name
       metadata[:storage_class] = obj.storage_class
       metadata[:state] = obj.state
@@ -289,7 +290,7 @@ module FakeS3
 
     def to_restored_expired(bucket, object_name)
       obj = get_bucket(bucket).find(object_name)
-      obj.storage_class = S3Object::StorageClass::STANDARD
+      obj.storage_class = S3Object::StorageClass::GLACIER
       obj.state = S3Object::State::RESTORED_COPY_EXPIRED
       metadata = load_metadata bucket, object_name
       metadata[:storage_class] = obj.storage_class
@@ -300,13 +301,15 @@ module FakeS3
     #tomorrow = (Time.now + 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
     #value = "ongoing-request=\"false\", expiry-date=\"#{tomorrow}\""
 
-    def to_restoring_in_progress(bucket, object_name)
+    def to_restoring_in_progress(bucket, object_name, days=1)
       obj = get_bucket(bucket).find(object_name)
       obj.storage_class = S3Object::StorageClass::GLACIER
       obj.state = S3Object::State::RESTORING
+      obj.days = days
       metadata = load_metadata bucket, object_name
       metadata[:storage_class] = obj.storage_class
       metadata[:state] = obj.state
+      metadata[:days] = 1
       store_metadata(bucket, object_name, metadata)
     end
 

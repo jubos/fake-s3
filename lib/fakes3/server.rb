@@ -106,8 +106,9 @@ module FakeS3
         response.header['ETag'] = "\"#{real_obj.md5}\""
         response['Accept-Ranges'] = "bytes"
         response['Last-Ranges'] = "bytes"
+        days = real_obj.days ? real_obj.days : 1
         yesterday = (Time.now - 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
-        tomorrow = (Time.now + 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
+        restore_expired = (Time.now + days * 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
         next_week = (Time.now + 7 * 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
         case real_obj.state
           when S3Object::State::IN_GLACIER
@@ -115,7 +116,7 @@ module FakeS3
           when S3Object::State::RESTORING
             response['x-amz-restore'] = "ongoing-request=\"true\""
           when S3Object::State::RESTORED
-            response['x-amz-restore'] = "ongoing-request=\"false\", expiry-date=\"#{tomorrow}\""
+            response['x-amz-restore'] = "ongoing-request=\"false\", expiry-date=\"#{restore_expired}\""
           when S3Object::State::RESTORED_COPY_EXPIRED
             response['x-amz-restore'] = "ongoing-request=\"false\", expiry-date=\"#{yesterday}\""
         end
@@ -194,31 +195,29 @@ module FakeS3
     end
 
     def do_POST(request,response)
-      # check that we've received file data
-      unless request.content_type =~ /^multipart\/form-data; boundary=(.+)/
-        raise WEBrick::HTTPStatus::BadRequest
-      end
       s_req = normalize_request(request)
-      key=request.query['key']
-      success_action_redirect=request.query['success_action_redirect']
-      success_action_status=request.query['success_action_status']
+      # check that we've received file data
+      if request.content_type =~ /^multipart\/form-data; boundary=(.+)/
+        key=request.query['key']
+        success_action_redirect=request.query['success_action_redirect']
+        success_action_status=request.query['success_action_status']
 
-      filename = 'default'
-      filename = $1 if request.body =~ /filename="(.*)"/
-      key=key.gsub('${filename}', filename)
-      
-      bucket_obj = @store.get_bucket(s_req.bucket) || @store.create_bucket(s_req.bucket)
-      real_obj=@store.store_object(bucket_obj, key, s_req.webrick_request)
-      
-      response['Etag'] = "\"#{real_obj.md5}\""
-      response.body = ""
-      if success_action_redirect
-        response.status = 307
-        response['Location']=success_action_redirect
-      else
-        response.status = success_action_status || 204
-        if response.status=="201"
-          response.body= <<-eos.strip
+        filename = 'default'
+        filename = $1 if request.body =~ /filename="(.*)"/
+        key=key.gsub('${filename}', filename)
+
+        bucket_obj = @store.get_bucket(s_req.bucket) || @store.create_bucket(s_req.bucket)
+        real_obj=@store.store_object(bucket_obj, key, s_req.webrick_request)
+
+        response['Etag'] = "\"#{real_obj.md5}\""
+        response.body = ""
+        if success_action_redirect
+          response.status = 307
+          response['Location']=success_action_redirect
+        else
+          response.status = success_action_status || 204
+          if response.status=="201"
+            response.body= <<-eos.strip
             <?xml version="1.0" encoding="UTF-8"?>
             <PostResponse>
               <Location>http://#{s_req.bucket}.localhost:#{@port}/#{key}</Location>
@@ -226,11 +225,17 @@ module FakeS3
               <Key>#{key}</Key>
               <ETag>#{response['Etag']}</ETag>
             </PostResponse>
-          eos
+            eos
+          end
         end
+        response['Content-Type'] = 'text/xml'
+        response['Access-Control-Allow-Origin']='*'
+      elsif request.body =~ /<Days>(\d+)<\/Days>/
+        days = $1 ? $1.to_i : 1
+        @store.to_restoring_in_progress s_req.bucket, s_req.object, days
+      else
+        raise WEBrick::HTTPStatus::BadRequest
       end
-      response['Content-Type'] = 'text/xml'
-      response['Access-Control-Allow-Origin']='*'
     end
 
     def do_DELETE(request,response)
@@ -247,11 +252,11 @@ module FakeS3
       response.status = 204
       response.body = ""
     end
-    
+
     def do_OPTIONS(request, response)
       super
       response["Access-Control-Allow-Origin"]="*"
-    end  
+    end
 
     private
 
@@ -375,7 +380,17 @@ module FakeS3
     def normalize_post(webrick_req,s_req)
       path = webrick_req.path
       path_len = path.size
-      
+      if s_req.is_path_style
+        elems = path[1,path_len].split("/")
+        s_req.bucket = elems[0]
+      else
+        elems = path.split("/")
+      end
+      if elems.size >= 2
+        object = elems[1,elems.size].join('/')
+        s_req.object = object
+      end
+
       s_req.path = webrick_req.query['key']
 
       s_req.webrick_request = webrick_req
