@@ -88,6 +88,7 @@ module FakeS3
         real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
         real_obj.storage_class = metadata[:storage_class]
         real_obj.state = metadata[:state]
+        real_obj.days = metadata[:days]
         return real_obj
       rescue
         puts $!
@@ -245,14 +246,12 @@ module FakeS3
         end
       end
       maxes = [0, 0, 0, 0]
-      list.each{|row| row.each_with_index{|col, index| maxes[index] = [col.size, row[index].size].max}}
+      list.each{|row| row.each_with_index{|col, index| maxes[index] = [col.size, maxes[index]].max}}
       maxes.map!{|e| e + 1}
-      list.map!{|row|
+      list.map do |row|
         index = -1
-        row.map{|val|
-          val.ljust(maxes[index+=1])}.join "\t"
-      }
-      list.join "\n"
+        row.map{|val| val.ljust(maxes[index+=1])}.join "\t"
+      end.join "\n"
     end
 
     def to_glacier(bucket, object_name)
@@ -285,9 +284,6 @@ module FakeS3
       store_metadata(bucket, object_name, metadata)
     end
 
-    #tomorrow = (Time.now + 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
-    #value = "ongoing-request=\"false\", expiry-date=\"#{tomorrow}\""
-
     def to_restored_expired(bucket, object_name)
       obj = get_bucket(bucket).find(object_name)
       obj.storage_class = S3Object::StorageClass::GLACIER
@@ -298,9 +294,6 @@ module FakeS3
       store_metadata(bucket, object_name, metadata)
     end
 
-    #tomorrow = (Time.now + 24 * 60 * 60).strftime '%a, %d %b %Y %H:%M:%S %Z'
-    #value = "ongoing-request=\"false\", expiry-date=\"#{tomorrow}\""
-
     def to_restoring_in_progress(bucket, object_name, days=1)
       obj = get_bucket(bucket).find(object_name)
       obj.storage_class = S3Object::StorageClass::GLACIER
@@ -309,7 +302,7 @@ module FakeS3
       metadata = load_metadata bucket, object_name
       metadata[:storage_class] = obj.storage_class
       metadata[:state] = obj.state
-      metadata[:days] = 1
+      metadata[:days] = days
       store_metadata(bucket, object_name, metadata)
     end
 
