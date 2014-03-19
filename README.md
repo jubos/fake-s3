@@ -47,6 +47,34 @@ add the following line to /etc/hosts
 
     127.0.1.1   posttest.localhost
 
+## Backdoor development REST api
+
+This REST api is for simulating lifecycle events on the S3 objects.
+
+List all the S3 objects with their bucket, name, location(storage class), and 'state'
+
+    GET /ADMIN_CONTROL
+
+Move object to glacier storage class
+
+    PUT /ADMIN_CONTROL/TO_GLACIER/<full_object_name>
+
+Move object to standard storage class
+
+    PUT /ADMIN_CONTROL/TO_STANDARD/<full_object_name>
+
+Move object to 'restoring from glacier' status
+
+    PUT /ADMIN_CONTROL/TO_RESTORING/<full_object_name>
+
+Move object to 'restored' status
+
+    PUT /ADMIN_CONTROL/TO_RESTORED/<full_object_name>
+
+Move object to 'restored but restored copy is expired' status
+
+    PUT /ADMIN_CONTROL/TO_RESTORED_EXPIRED/<full_object_name>
+
 
 ## Running Tests
 
