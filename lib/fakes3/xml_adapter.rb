@@ -127,7 +127,7 @@ module FakeS3
           contents.LastModified(s3_object.modified_date)
           contents.ETag("\"#{s3_object.md5}\"")
           contents.Size(s3_object.size)
-          contents.StorageClass("STANDARD")
+          contents.StorageClass(s3_object.storage_class)
 
           contents.Owner { |owner|
             owner.ID("abc")

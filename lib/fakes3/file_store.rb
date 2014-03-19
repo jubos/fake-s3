@@ -16,7 +16,8 @@ module FakeS3
       @bucket_hash = {}
       Dir[File.join(root,"*")].each do |bucket|
         bucket_name = File.basename(bucket)
-        bucket_obj = Bucket.new(bucket_name,Time.now,[])
+        objects = objects_for_bucket(bucket_name)
+        bucket_obj = Bucket.new(bucket_name,Time.now,objects)
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
       end
@@ -82,8 +83,12 @@ module FakeS3
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
         real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
         real_obj.size = metadata.fetch(:size) { 0 }
-        real_obj.creation_date = File.ctime(obj_root).utc.iso8601()
-        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).utc.iso8601() }
+        real_obj.creation_date = File.ctime(obj_root).iso8601()
+        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).iso8601() }
+        real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
+        real_obj.storage_class = metadata[:storage_class]
+        real_obj.state = metadata[:state]
+        real_obj.days = metadata[:days]
         return real_obj
       rescue
         puts $!
@@ -162,7 +167,7 @@ module FakeS3
         # TODO put a tmpfile here first and mv it over at the end
 
         match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
-      	boundary = match[1] if match
+        boundary = match[1] if match
         if boundary
           boundary = WEBrick::HTTPUtils::dequote(boundary)
           filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
@@ -188,6 +193,9 @@ module FakeS3
         obj.content_type = metadata_struct[:content_type]
         obj.size = metadata_struct[:size]
         obj.modified_date = metadata_struct[:modified_date]
+        obj.storage_class = metadata_struct[:storage_class]
+        obj.custom_metadata = metadata_struct[:custom_metadata]
+        obj.state = metadata_struct[:state]
 
         bucket.add(obj)
         return obj
@@ -217,7 +225,123 @@ module FakeS3
       metadata[:content_type] = request.header["content-type"].first
       metadata[:size] = File.size(content)
       metadata[:modified_date] = File.mtime(content).utc.iso8601()
-      return metadata
+      metadata[:storage_class] = S3Object::StorageClass::STANDARD
+      metadata[:state] = S3Object::State::IN_STANDARD
+
+      request.header.each do |key, value|
+        match = /^x-amz-meta-(.*)$/.match(key)
+        if match
+          metadata[:custom_metadata][match[1]] = value.join(', ')
+        end
+      end      
+      metadata
+    end
+
+    def list_all
+      list = [%w(BUCKET OBJECT_NAME STORAGE_CLASS STATE)]
+      buckets.each do |bucket|
+        bucket.objects.list({}).matches.collect(&:name).each do |object_name|
+          object = get_object bucket.name, object_name, nil
+          list << [bucket.name, object.name, object.storage_class, object.state]
+        end
+      end
+      maxes = [0, 0, 0, 0]
+      list.each{|row| row.each_with_index{|col, index| maxes[index] = [col.size, maxes[index]].max}}
+      maxes.map!{|e| e + 1}
+      list.map do |row|
+        index = -1
+        row.map{|val| val.ljust(maxes[index+=1])}.join "\t"
+      end.join "\n"
+    end
+
+    def to_glacier(bucket, object_name)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::GLACIER
+      obj.state = S3Object::State::IN_GLACIER
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
+      store_metadata(bucket, object_name, metadata)
+    end
+
+    def to_standard(bucket, object_name)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::STANDARD
+      obj.state = S3Object::State::IN_STANDARD
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
+      store_metadata(bucket, object_name, metadata)
+    end
+
+    def to_restored_from_glacier(bucket, object_name)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::GLACIER
+      obj.state = S3Object::State::RESTORED
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
+      store_metadata(bucket, object_name, metadata)
+    end
+
+    def to_restored_expired(bucket, object_name)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::GLACIER
+      obj.state = S3Object::State::RESTORED_COPY_EXPIRED
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
+      store_metadata(bucket, object_name, metadata)
+    end
+
+    def to_restoring_in_progress(bucket, object_name, days=1)
+      obj = get_bucket(bucket).find(object_name)
+      obj.storage_class = S3Object::StorageClass::GLACIER
+      obj.state = S3Object::State::RESTORING
+      obj.days = days
+      metadata = load_metadata bucket, object_name
+      metadata[:storage_class] = obj.storage_class
+      metadata[:state] = obj.state
+      metadata[:days] = days
+      store_metadata(bucket, object_name, metadata)
+    end
+
+    private
+
+    def load_metadata(bucket, object_name)
+      YAML.load(File.open(metadata_file(bucket, object_name),'rb'))
+    end
+
+    def store_metadata(bucket, object_name, metadata)
+      File.open(metadata_file(bucket, object_name),'w') do |f|
+        f << YAML::dump(metadata)
+      end
+    end
+
+    def metadata_file(bucket, object_name)
+      obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
+       File.join(obj_root, "metadata")
+    end
+
+    def objects_for_bucket(bucket_name)
+      bucket_dir = File.join @root, bucket_name
+      discover_object_names(bucket_dir, '').map do |object_name|
+        get_object(bucket_name, object_name, nil)
+      end
+    end
+
+    def discover_object_names(dir, prefix)
+      names = []
+      metadata_dir = File.join dir,SHUCK_METADATA_DIR
+      if Dir.exists? metadata_dir
+        names << prefix
+      end
+      Dir[File.join(dir,'*')].select{|file| File.directory? file}.each do |dir|
+        dir_name = File.basename dir
+        new_prefix = prefix.empty? ? dir_name : "#{prefix}/#{dir_name}"
+        names += discover_object_names(dir, new_prefix)
+      end
+      names
     end
   end
 end
