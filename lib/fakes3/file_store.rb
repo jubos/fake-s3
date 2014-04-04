@@ -84,6 +84,7 @@ module FakeS3
         real_obj.name = object_name
         real_obj.md5 = metadata[:md5]
         real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
+        real_obj.content_encoding = metadata.fetch(:content_encoding)
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
         real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
         real_obj.size = metadata.fetch(:size) { 0 }
@@ -147,6 +148,7 @@ module FakeS3
       obj.name = dst_name
       obj.md5 = src_metadata[:md5]
       obj.content_type = src_metadata[:content_type]
+      obj.content_encoding = src_metadata[:content_encoding]
       obj.size = src_metadata[:size]
       obj.modified_date = src_metadata[:modified_date]
 
@@ -201,6 +203,7 @@ module FakeS3
         obj.name = object_name
         obj.md5 = metadata_struct[:md5]
         obj.content_type = metadata_struct[:content_type]
+        obj.content_encoding = metadata_struct[:content_encoding]
         obj.size = metadata_struct[:size]
         obj.modified_date = metadata_struct[:modified_date]
 
@@ -261,6 +264,7 @@ module FakeS3
       metadata = {}
       metadata[:md5] = Digest::MD5.file(content).hexdigest
       metadata[:content_type] = request.header["content-type"].first
+      metadata[:content_encoding] = request.header["content-encoding"].first
       metadata[:size] = File.size(content)
       metadata[:modified_date] = File.mtime(content).utc.iso8601(SUBSECOND_PRECISION)
       metadata[:amazon_metadata] = {}
