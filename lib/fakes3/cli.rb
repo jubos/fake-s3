@@ -2,6 +2,12 @@ require 'thor'
 require 'fakes3/server'
 require 'fakes3/version'
 
+# Hack to workaround a concurrency bug in ruby.
+# Similar bug reported here:
+# https://github.com/celluloid/timers/issues/20
+require 'set'
+SortedSet.new
+
 module FakeS3
   class CLI < Thor
     default_task("server")
