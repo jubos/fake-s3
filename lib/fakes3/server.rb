@@ -163,6 +163,7 @@ module FakeS3
           end
         end
         response['Content-Length'] = File::Stat.new(real_obj.io.path).size
+        response['Content-Disposition'] = 'attachment'
         if s_req.http_verb == 'HEAD'
           response.body = ""
 	        real_obj.io.close
@@ -336,7 +337,6 @@ module FakeS3
 
     def do_OPTIONS(request, response)
       super
-
       response['Access-Control-Allow-Origin']   = '*'
       response['Access-Control-Allow-Methods']  = 'PUT, POST, HEAD, GET, OPTIONS'
       response['Access-Control-Allow-Headers']  = 'Accept, Content-Type, Authorization, Content-Length, ETag, X-CSRF-Token'
