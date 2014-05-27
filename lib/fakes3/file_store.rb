@@ -275,7 +275,7 @@ module FakeS3
         return nil
       end
     end
-    
+
     # TODO: abstract getting meta data from request.
     def create_metadata(content, request)
       metadata = {}
