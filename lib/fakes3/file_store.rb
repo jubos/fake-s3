@@ -148,38 +148,40 @@ module FakeS3
       return obj
     end
 
-    def store_object(bucket,object_name,request)
+    def store_object(bucket, object_name, request)
       begin
-        filename = File.join(@root,bucket.name,object_name)
+        filename = File.join(@root, bucket.name, object_name)
         FileUtils.mkdir_p(filename)
 
-        metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
+        metadata_dir = File.join(filename, SHUCK_METADATA_DIR)
         FileUtils.mkdir_p(metadata_dir)
 
-        content = File.join(filename,SHUCK_METADATA_DIR,"content")
-        metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
+        content = File.join(filename, SHUCK_METADATA_DIR, 'content')
+        metadata = File.join(filename, SHUCK_METADATA_DIR, 'metadata')
 
-        # TODO put a tmpfile here first and mv it over at the end
+        md5 = Digest::MD5.new
 
-        match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
-      	boundary = match[1] if match
-        if boundary
-          boundary = WEBrick::HTTPUtils::dequote(boundary)
-          filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
-          raise HTTPStatus::BadRequest if filedata['file'].empty?
-          File.open(content, 'wb') do |f|
-            f << filedata['file']
-          end
-        else
-          File.open(content,'wb') do |f|
-            request.body do |chunk|
-              f << chunk
-            end
+        File.open(filename + request.filename, 'w+') do |f|
+          request.body do |chunk|
+            f << chunk
           end
         end
-        metadata_struct = create_metadata(content,request)
-        File.open(metadata,'w') do |f|
-          f << YAML::dump(metadata_struct)
+
+        File.open(content, 'wb') do |f|
+          request.body do |chunk|
+            f << chunk
+            md5 << chunk
+          end
+        end
+
+        metadata_struct = {}
+        metadata_struct[:md5] = md5.hexdigest
+        metadata_struct[:content_type] = request.header['content-type'].first
+        metadata_struct[:size] = File.size(content)
+        metadata_struct[:modified_date] = File.mtime(content).iso8601
+
+        File.open(metadata, 'w') do |f|
+          f << YAML.dump(metadata_struct)
         end
 
         obj = S3Object.new
