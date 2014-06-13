@@ -159,29 +159,31 @@ module FakeS3
         content = File.join(filename, SHUCK_METADATA_DIR, 'content')
         metadata = File.join(filename, SHUCK_METADATA_DIR, 'metadata')
 
-        md5 = Digest::MD5.new
-
         File.open(filename + request.filename, 'w+') do |f|
           request.body do |chunk|
             f << chunk
           end
         end
 
-        File.open(content, 'wb') do |f|
-          request.body do |chunk|
-            f << chunk
-            md5 << chunk
+        match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
+        boundary = match[1] if match
+        if boundary
+          boundary = WEBrick::HTTPUtils::dequote(boundary)
+          filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
+          raise HTTPStatus::BadRequest if filedata['file'].empty?
+          File.open(content, 'wb') do |f|
+            f << filedata['file']
+          end
+        else
+          File.open(content,'wb') do |f|
+            request.body do |chunk|
+              f << chunk
+            end
           end
         end
-
-        metadata_struct = {}
-        metadata_struct[:md5] = md5.hexdigest
-        metadata_struct[:content_type] = request.header['content-type'].first
-        metadata_struct[:size] = File.size(content)
-        metadata_struct[:modified_date] = File.mtime(content).iso8601
-
-        File.open(metadata, 'w') do |f|
-          f << YAML.dump(metadata_struct)
+        metadata_struct = create_metadata(content,request)
+        File.open(metadata,'w') do |f|
+          f << YAML::dump(metadata_struct)
         end
 
         obj = S3Object.new
