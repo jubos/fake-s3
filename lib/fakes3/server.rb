@@ -278,7 +278,11 @@ module FakeS3
           else
             s_req.type = Request::GET
           end
-          object = elems[1,elems.size].join('/')
+          if elems[elems.size-1].include? '.'
+            object = elems[1, elems.size - 2].join('/')
+          else
+            object = elems[1, elems.size].join('/')
+          end
           s_req.object = object
         end
       end
@@ -347,7 +351,6 @@ module FakeS3
       s_req.is_path_style = true
 
       s_req.bucket = webrick_req.path.split('/')[1]
-      s_req.is_path_style = false
 
       s_req.http_verb = webrick_req.request_method
 
