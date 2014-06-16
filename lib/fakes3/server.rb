@@ -228,6 +228,18 @@ module FakeS3
 
     private
 
+    def add_cors_headers(request, response)
+      response['Access-Control-Allow-Origin'] = '*' if request['Origin']
+    end
+
+    def get_bucket(bucket)
+      unless bucket_obj = @store.get_bucket(bucket)
+        #Lazily create a bucket.  TODO fix this to return the proper error
+        bucket_obj = @store.create_bucket(bucket)
+      end
+      bucket_obj
+    end
+        
     def normalize_delete(webrick_req,s_req)
       path = webrick_req.path
       path_len = path.size

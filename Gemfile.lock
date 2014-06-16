@@ -23,7 +23,7 @@ PATH
       thor
 
 GEM
-  remote: http://rubygems.org/
+  remote: https://rubygems.org/
   specs:
     actionpack (4.1.1)
       actionview (= 4.1.1)
