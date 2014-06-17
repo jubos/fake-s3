@@ -73,10 +73,10 @@ module FakeS3
 
     def get_object(bucket, object_name, request)
       begin
-        real_obj = S3Object.new
         obj_root = File.join(@root, bucket, object_name)
         metadata = YAML.load(File.open(File.join(obj_root, SHUCK_METADATA_DIR, 'metadata'),'rb'))
-        data = YAML.load(File.open(File.join(obj_root, request.path.split('/').last),'rb'))
+        data = File.open(File.join(obj_root, request.path.split('/').last),'rb')
+        real_obj = S3Object.new
         real_obj.name = object_name
         real_obj.md5 = metadata[:md5]
         real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
@@ -96,9 +96,19 @@ module FakeS3
     def object_metadata(bucket,object)
     end
 
-    def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name,request)
+    def copy_object(src_bucket_name, src_name, dst_bucket_name, dst_name, request)
+      dst_path = File.join(@root, dst_bucket_name, dst_name)
+      src_path = File.join(@root, src_bucket_name, src_name)
+      FileUtils.mkdir_p(File.dirname(dst_path))
+      FileUtils.cp(src_path, dst_path)
+
+      src_elems = src_name.split('/')
+      dst_elems = dst_name.split('/')
+      src_name = src_elems[0, src_elems.size-1].join('/')
+      dst_name = dst_elems[0, dst_elems.size-1].join('/')
       src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
       src_metadata_filename = File.join(src_root,"metadata")
+
       src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)
       src_content_filename = File.join(src_root,"content")
 

@@ -138,7 +138,7 @@ module FakeS3
         if s_req.http_verb == 'HEAD'
           response.body = ""
         else
-          response.body = real_obj.io
+          response.body = real_obj
         end
       end
     end
