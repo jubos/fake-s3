@@ -162,7 +162,6 @@ module FakeS3
 
     def store_object(bucket, object_name, request)
       begin
-        require 'pry'; pry
         filename = File.join(@root, bucket.name, object_name)
         FileUtils.mkdir_p(filename)
 
