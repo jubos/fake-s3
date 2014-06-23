@@ -194,7 +194,7 @@ module FakeS3
           <PostResponse>
             <Location>http://#{request.host}:#{request.port}/#{s_req.object}</Location>
             <Bucket>#{s_req.bucket}</Bucket>
-            <Key>#{s_req.object}/#{request.path.split('/').last}</Key>
+            <Key>#{s_req.object}/#{request.body.match(/filename=\"(.*)\"/).captures.first}</Key>
             <ETag>#{real_obj.md5}</ETag>
           </PostResponse>
           EOS

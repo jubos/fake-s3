@@ -162,6 +162,7 @@ module FakeS3
 
     def store_object(bucket, object_name, request)
       begin
+        require 'pry'; pry
         filename = File.join(@root, bucket.name, object_name)
         FileUtils.mkdir_p(filename)
 
@@ -170,8 +171,9 @@ module FakeS3
 
         content = File.join(filename, SHUCK_METADATA_DIR, 'content')
         metadata = File.join(filename, SHUCK_METADATA_DIR, 'metadata')
+        path_file = File.join(filename, request.filename)
 
-        File.open(filename + request.filename, 'w+') do |f|
+        File.open(path_file, 'w+') do |f|
           request.body do |chunk|
             f << chunk
           end
