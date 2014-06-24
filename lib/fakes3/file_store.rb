@@ -162,7 +162,7 @@ module FakeS3
 
     def store_object(bucket, object_name, request)
       begin
-        filename = File.join(@root, bucket.name, object_name)
+        filename = File.join(@root, bucket.name, object_name.split('/').reverse.drop(1).reverse.join('/'))
         FileUtils.mkdir_p(filename)
 
         metadata_dir = File.join(filename, SHUCK_METADATA_DIR)

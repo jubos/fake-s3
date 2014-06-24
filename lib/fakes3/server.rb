@@ -194,7 +194,7 @@ module FakeS3
           <PostResponse>
             <Location>http://#{request.host}:#{request.port}/#{s_req.object}</Location>
             <Bucket>#{s_req.bucket}</Bucket>
-            <Key>#{s_req.object.split('/').join('/')}/#{request.body.match(/filename=\"(.*)\"/).captures.first}</Key>
+            <Key>#{s_req.object.split('/').join('/')}</Key>
             <ETag>#{real_obj.md5}</ETag>
           </PostResponse>
           EOS
@@ -347,7 +347,7 @@ module FakeS3
       form = webrick_req.query
       file = form['file']
       filename = webrick_req.body.match(/filename=\"(.*)\"/).captures.first
-      s_req.object = form['key'].sub('${filename}', file)
+      s_req.object = form['key']
       headers = { 'content-type' => [form['Content-Type']] }
       s_req.webrick_request = PostRequest.new(headers, file, filename)
       s_req.type = Request::STORE
