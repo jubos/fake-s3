@@ -347,7 +347,7 @@ module FakeS3
       form = webrick_req.query
       file = form['file']
       filename = webrick_req.body.match(/filename=\"(.*)\"/).captures.first
-      s_req.object = form['key']
+      s_req.object = form['key'].sub('${filename}', filename)
       headers = { 'content-type' => [form['Content-Type']] }
       s_req.webrick_request = PostRequest.new(headers, file, filename)
       s_req.type = Request::STORE
