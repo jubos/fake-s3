@@ -100,7 +100,12 @@ module FakeS3
       dst_path = File.join(@root, dst_bucket_name, dst_name)
       src_path = File.join(@root, src_bucket_name, src_name)
       FileUtils.mkdir_p(File.dirname(dst_path))
-      FileUtils.cp(src_path, dst_path)
+      begin
+        FileUtils.cp(src_path, dst_path)
+      rescue
+        puts 'No sources where found'
+        return nil
+      end
 
       src_elems = src_name.split('/')
       dst_elems = dst_name.split('/')
@@ -158,6 +163,11 @@ module FakeS3
       dst_bucket.add(obj)
       src_bucket.remove(src_obj)
       return obj
+
+    rescue => e
+      puts $!
+      $!.backtrace.each { |line| puts line }
+      return nil
     end
 
     def store_object(bucket, object_name, request)
