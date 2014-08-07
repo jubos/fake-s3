@@ -75,15 +75,17 @@ module FakeS3
       begin
         real_obj = S3Object.new
         obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
-        metadata = YAML.load(File.open(File.join(obj_root,"metadata"),'rb'))
-        real_obj.name = object_name
-        real_obj.md5 = metadata[:md5]
-        real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
-        #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
-        real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
-        real_obj.size = metadata.fetch(:size) { 0 }
-        real_obj.creation_date = File.ctime(obj_root).utc.iso8601()
-        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).utc.iso8601() }
+        File.open(File.join(obj_root,"metadata"),'rb') do |metadata_file|
+          metadata = YAML.load(metadata_file)
+          real_obj.name = object_name
+          real_obj.md5 = metadata[:md5]
+          real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
+          #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
+          real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
+          real_obj.size = metadata.fetch(:size) { 0 }
+          real_obj.creation_date = File.ctime(obj_root).utc.iso8601()
+          real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).utc.iso8601() }
+        end
         return real_obj
       rescue
         puts $!
