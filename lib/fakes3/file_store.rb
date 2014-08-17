@@ -216,6 +216,13 @@ module FakeS3
       end
     end
 
+    def get_policy(bucket)
+      begin
+        policyname = File.join(@root,"policies",bucket)
+        return File.read(policyname)
+      end
+    end
+
     def put_policy(bucket,policy)
       begin
         policyname = File.join(@root,"policies",bucket)
