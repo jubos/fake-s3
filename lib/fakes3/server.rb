@@ -20,6 +20,7 @@ module FakeS3
     MOVE = "MOVE"
     DELETE_OBJECT = "DELETE_OBJECT"
     DELETE_BUCKET = "DELETE_BUCKET"
+    PUT_POLICY = "PUT_POLICY"
 
     attr_accessor :bucket,:object,:type,:src_bucket,
                   :src_object,:method,:webrick_request,
@@ -151,6 +152,8 @@ module FakeS3
         response.header['ETag'] = "\"#{real_obj.md5}\""
       when Request::CREATE_BUCKET
         @store.create_bucket(s_req.bucket)
+      when Request::PUT_POLICY
+        @store.put_policy(s_req.bucket,s_req.policy)
       end
     end
 

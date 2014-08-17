@@ -20,6 +20,7 @@ module FakeS3
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
       end
+      FileUtils.mkdir_p(File.join(@root,"policies"))
     end
 
     # Pass a rate limit in bytes per second
@@ -60,6 +61,7 @@ module FakeS3
         @buckets << bucket_obj
         @bucket_hash[bucket] = bucket_obj
       end
+      File.open(File.join(@root,"policies",bucket),'w') { |file| file.write("") }
       bucket_obj
     end
 
@@ -68,6 +70,7 @@ module FakeS3
       raise NoSuchBucket if !bucket
       raise BucketNotEmpty if bucket.objects.count > 0
       FileUtils.rm_r(get_bucket_folder(bucket))
+      File.delete(File.join(@root,"policies",bucket_name))
       @bucket_hash.delete(bucket_name)
     end
 
@@ -164,7 +167,7 @@ module FakeS3
         # TODO put a tmpfile here first and mv it over at the end
 
         match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
-      	boundary = match[1] if match
+        boundary = match[1] if match
         if boundary
           boundary = WEBrick::HTTPUtils::dequote(boundary)
           filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
@@ -210,6 +213,13 @@ module FakeS3
         puts $!
         $!.backtrace.each { |line| puts line }
         return nil
+      end
+    end
+
+    def put_policy(bucket,policy)
+      begin
+        policyname = File.join(@root,"policies",bucket)
+        File.open(policyname,'w')) { |file| file.write(policy) }
       end
     end
 
