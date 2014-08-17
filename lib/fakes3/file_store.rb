@@ -219,7 +219,7 @@ module FakeS3
     def put_policy(bucket,policy)
       begin
         policyname = File.join(@root,"policies",bucket)
-        File.open(policyname,'w')) { |file| file.write(policy) }
+        File.open(policyname,'w') { |file| file.write(policy) }
       end
     end
 

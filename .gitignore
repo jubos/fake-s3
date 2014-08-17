@@ -3,3 +3,4 @@ pkg/*
 .bundle
 tmp
 test_root
+Gemfile.lock
