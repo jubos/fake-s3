@@ -153,7 +153,7 @@ module FakeS3
       when Request::CREATE_BUCKET
         @store.create_bucket(s_req.bucket)
       when Request::PUT_POLICY
-        @store.put_policy(s_req.bucket,s_req.policy)
+        @store.put_policy(s_req.bucket, request.body)
       end
     end
 
@@ -287,7 +287,11 @@ module FakeS3
           elems = path[1,path_len].split("/")
           s_req.bucket = elems[0]
           if elems.size == 1
-            s_req.type = Request::CREATE_BUCKET
+            if webrick_req.query_string == "policy"
+              s_req.type = Request::PUT_POLICY
+            else
+              s_req.type = Request::CREATE_BUCKET
+            end
           else
             if webrick_req.request_line =~ /\?acl/
               s_req.type = Request::SET_ACL
