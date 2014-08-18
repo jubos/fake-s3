@@ -13,15 +13,17 @@ GEM
       mime-types
       xml-simple
     builder (3.2.2)
-    mime-types (1.25)
-    rake (10.1.0)
-    rest-client (1.6.7)
-      mime-types (>= 1.16)
+    mime-types (2.3)
+    netrc (0.7.7)
+    rake (10.3.2)
+    rest-client (1.7.2)
+      mime-types (>= 1.16, < 3.0)
+      netrc (~> 0.7)
     right_aws (3.1.0)
       right_http_connection (>= 1.2.5)
     right_http_connection (1.4.0)
-    thor (0.18.1)
-    xml-simple (1.1.2)
+    thor (0.19.1)
+    xml-simple (1.1.4)
 
 PLATFORMS
   ruby
