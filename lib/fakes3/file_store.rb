@@ -20,6 +20,7 @@ module FakeS3
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
       end
+      FileUtils.mkdir_p(File.join(@root,"policies"))
     end
 
     # Pass a rate limit in bytes per second
@@ -60,6 +61,7 @@ module FakeS3
         @buckets << bucket_obj
         @bucket_hash[bucket] = bucket_obj
       end
+      File.open(File.join(@root,"policies",bucket),'w') { |file| file.write("") }
       bucket_obj
     end
 
@@ -68,6 +70,7 @@ module FakeS3
       raise NoSuchBucket if !bucket
       raise BucketNotEmpty if bucket.objects.count > 0
       FileUtils.rm_r(get_bucket_folder(bucket))
+      File.delete(File.join(@root,"policies",bucket_name))
       @bucket_hash.delete(bucket_name)
     end
 
@@ -75,15 +78,17 @@ module FakeS3
       begin
         real_obj = S3Object.new
         obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
-        metadata = YAML.load(File.open(File.join(obj_root,"metadata"),'rb'))
-        real_obj.name = object_name
-        real_obj.md5 = metadata[:md5]
-        real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
-        #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
-        real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
-        real_obj.size = metadata.fetch(:size) { 0 }
-        real_obj.creation_date = File.ctime(obj_root).utc.iso8601()
-        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).utc.iso8601() }
+        File.open(File.join(obj_root,"metadata"),'rb') do |metadata_file|
+          metadata = YAML.load(metadata_file)
+          real_obj.name = object_name
+          real_obj.md5 = metadata[:md5]
+          real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
+          #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
+          real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
+          real_obj.size = metadata.fetch(:size) { 0 }
+          real_obj.creation_date = File.ctime(obj_root).utc.iso8601()
+          real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).utc.iso8601() }
+        end
         return real_obj
       rescue
         puts $!
@@ -162,7 +167,7 @@ module FakeS3
         # TODO put a tmpfile here first and mv it over at the end
 
         match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
-      	boundary = match[1] if match
+        boundary = match[1] if match
         if boundary
           boundary = WEBrick::HTTPUtils::dequote(boundary)
           filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
@@ -208,6 +213,20 @@ module FakeS3
         puts $!
         $!.backtrace.each { |line| puts line }
         return nil
+      end
+    end
+
+    def get_policy(bucket)
+      begin
+        policyname = File.join(@root,"policies",bucket)
+        return File.read(policyname)
+      end
+    end
+
+    def put_policy(bucket,policy)
+      begin
+        policyname = File.join(@root,"policies",bucket)
+        File.open(policyname,'w') { |file| file.write(policy) }
       end
     end
 
