@@ -40,6 +40,20 @@ module FakeS3
   end
 
   class Servlet < WEBrick::HTTPServlet::AbstractServlet
+    class PostRequest
+      attr_reader :header, :filename
+      def initialize(headers, body, filename)
+        @header = headers
+        @body = body
+        @filename = filename
+      end
+
+      def body
+        yield @body if block_given?
+        @body
+      end
+    end
+
     def initialize(server,store,hostname)
       super(server)
       @store = store
@@ -90,37 +104,35 @@ module FakeS3
 
         response.status = 200
         response['Content-Type'] = real_obj.content_type
-        stat = File::Stat.new(real_obj.io.path)
 
         response['Last-Modified'] = Time.iso8601(real_obj.modified_date).httpdate()
         response.header['ETag'] = "\"#{real_obj.md5}\""
         response['Accept-Ranges'] = "bytes"
         response['Last-Ranges'] = "bytes"
 
-        content_length = stat.size
-
         # Added Range Query support
-        if range = request.header["range"].first
-          response.status = 206
-          if range =~ /bytes=(\d*)-(\d*)/
-            start = $1.to_i
-            finish = $2.to_i
-            finish_str = ""
-            if finish == 0
-              finish = content_length - 1
-              finish_str = "#{finish}"
-            else
-              finish_str = finish.to_s
-            end
+        #if range = request.header["range"].first
+          #response.status = 206
+          #if range =~ /bytes=(\d*)-(\d*)/
+            #start = $1.to_i
+            #finish = $2.to_i
+            #finish_str = ""
+            #if finish == 0
+              #finish = content_length - 1
+              #finish_str = "#{finish}"
+            #else
+              #finish_str = finish.to_s
+            #end
 
-            bytes_to_read = finish - start + 1
-            response['Content-Range'] = "bytes #{start}-#{finish_str}/#{content_length}"
-            real_obj.io.pos = start
-            response.body = real_obj.io.read(bytes_to_read)
-            return
-          end
-        end
-        response['Content-Length'] = File::Stat.new(real_obj.io.path).size
+            #bytes_to_read = finish - start + 1
+            #response['Content-Range'] = "bytes #{start}-#{finish_str}/#{content_length}"
+            #real_obj.io.pos = start
+            #response.body = real_obj.io.read(bytes_to_read)
+            #return
+          #end
+        #end
+
+        response['Content-Length'] = real_obj.size
         if s_req.http_verb == 'HEAD'
           response.body = ""
         else
@@ -154,44 +166,42 @@ module FakeS3
       end
     end
 
-    def do_POST(request,response)
-      # check that we've received file data
-      unless request.content_type =~ /^multipart\/form-data; boundary=(.+)/
-        raise WEBrick::HTTPStatus::BadRequest
-      end
-      s_req = normalize_request(request)
-      key=request.query['key']
-      success_action_redirect=request.query['success_action_redirect']
-      success_action_status=request.query['success_action_status']
+    # See:
+    # http://aws.amazon.com/articles/1434
+    # http://docs.aws.amazon.com/AmazonS3/latest/dev/HTTPPOSTForms.html
+    # http://docs.aws.amazon.com/AmazonS3/2006-03-01/API/RESTObjectPOST.html
+    def do_POST(request, response)
+      add_cors_headers(request, response)
 
-      filename = 'default'
-      filename = $1 if request.body =~ /filename="(.*)"/
-      key=key.gsub('${filename}', filename)
-      
-      bucket_obj = @store.get_bucket(s_req.bucket) || @store.create_bucket(s_req.bucket)
-      real_obj=@store.store_object(bucket_obj, key, s_req.webrick_request)
-      
+      s_req = normalize_request(request)
+      bucket_obj = get_bucket(s_req.bucket)
+      real_obj = @store.store_object(bucket_obj, s_req.object, s_req.webrick_request)
       response['Etag'] = "\"#{real_obj.md5}\""
-      response.body = ""
-      if success_action_redirect
+      response['Connection'] = 'close'
+
+      form = request.query
+      if redirect = form['success_action_redirect']
         response.status = 307
-        response['Location']=success_action_redirect
+        response['Location'] = redirect
       else
-        response.status = success_action_status || 204
-        if response.status=="201"
-          response.body= <<-eos.strip
-            <?xml version="1.0" encoding="UTF-8"?>
-            <PostResponse>
-              <Location>http://#{s_req.bucket}.localhost:#{@port}/#{key}</Location>
-              <Bucket>#{s_req.bucket}</Bucket>
-              <Key>#{key}</Key>
-              <ETag>#{response['Etag']}</ETag>
-            </PostResponse>
-          eos
+        status = form['success_action_status']
+        response.status = status ? status.to_i : 204
+        if response.status == 201
+          response.body = <<-EOS
+          <?xml version="1.0" encoding="UTF-8"?>
+          <PostResponse>
+            <Location>http://#{request.host}:#{request.port}/#{s_req.object}</Location>
+            <Bucket>#{s_req.bucket}</Bucket>
+            <Key>#{s_req.object.split('/').join('/')}</Key>
+            <ETag>#{real_obj.md5}</ETag>
+          </PostResponse>
+          EOS
         end
       end
-      response['Content-Type'] = 'text/xml'
-      response['Access-Control-Allow-Origin']='*'
+      puts response
+    rescue => e
+      response.status = 400
+      response.body = e.message
     end
 
     def do_DELETE(request,response)
@@ -208,7 +218,7 @@ module FakeS3
       response.status = 204
       response.body = ""
     end
-    
+
     def do_OPTIONS(request, response)
       super
       response["Access-Control-Allow-Origin"]="*"
@@ -216,6 +226,18 @@ module FakeS3
 
     private
 
+    def add_cors_headers(request, response)
+      response['Access-Control-Allow-Origin'] = '*' if request['Origin']
+    end
+
+    def get_bucket(bucket)
+      unless bucket_obj = @store.get_bucket(bucket)
+        #Lazily create a bucket.  TODO fix this to return the proper error
+        bucket_obj = @store.create_bucket(bucket)
+      end
+      bucket_obj
+    end
+        
     def normalize_delete(webrick_req,s_req)
       path = webrick_req.path
       path_len = path.size
@@ -266,7 +288,11 @@ module FakeS3
           else
             s_req.type = Request::GET
           end
-          object = elems[1,elems.size].join('/')
+          if elems[elems.size-1].include? '.'
+            object = elems[1, elems.size - 2].join('/')
+          else
+            object = elems[1, elems.size].join('/')
+          end
           s_req.object = object
         end
       end
@@ -315,46 +341,45 @@ module FakeS3
       s_req.webrick_request = webrick_req
     end
 
-    def normalize_post(webrick_req,s_req)
-      path = webrick_req.path
-      path_len = path.size
-      
-      s_req.path = webrick_req.query['key']
-
-      s_req.webrick_request = webrick_req
+    def normalize_post(webrick_req, s_req)
+      form = webrick_req.query
+      file = form['file']
+      filename = webrick_req.body.match(/filename=\"(.*)\"/).captures.first
+      s_req.object = form['key'].sub('${filename}', filename)
+      headers = { 'content-type' => [form['Content-Type']] }
+      s_req.webrick_request = PostRequest.new(headers, file, filename)
+      s_req.type = Request::STORE
     end
 
     # This method takes a webrick request and generates a normalized FakeS3 request
     def normalize_request(webrick_req)
-      host_header= webrick_req["Host"]
-      host = host_header.split(':')[0]
+      host_header = webrick_req['Host']
+      host_header.split(':')[0]
 
       s_req = Request.new
       s_req.path = webrick_req.path
       s_req.is_path_style = true
 
-      if !@root_hostnames.include?(host)
-        s_req.bucket = host.split(".")[0]
-        s_req.is_path_style = false
-      end
+      s_req.bucket = webrick_req.path.split('/')[1]
 
       s_req.http_verb = webrick_req.request_method
 
       case webrick_req.request_method
       when 'PUT'
-        normalize_put(webrick_req,s_req)
-      when 'GET','HEAD'
-        normalize_get(webrick_req,s_req)
+        normalize_put(webrick_req, s_req)
+      when 'GET', 'HEAD'
+        normalize_get(webrick_req, s_req)
       when 'DELETE'
-        normalize_delete(webrick_req,s_req)
+        normalize_delete(webrick_req, s_req)
       when 'POST'
-        normalize_post(webrick_req,s_req)
+        normalize_post(webrick_req, s_req)
       else
         raise "Unknown Request"
       end
 
-      return s_req
+      s_req
     end
+
 
     def dump_request(request)
       puts "----------Dump Request-------------"

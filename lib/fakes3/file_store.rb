@@ -71,19 +71,20 @@ module FakeS3
       @bucket_hash.delete(bucket_name)
     end
 
-    def get_object(bucket,object_name, request)
+    def get_object(bucket, object_name, request)
       begin
+        obj_root = File.join(@root, bucket, object_name)
+        metadata = YAML.load(File.open(File.join(obj_root, SHUCK_METADATA_DIR, 'metadata'),'rb'))
+        data = File.open(File.join(obj_root, request.path.split('/').last),'rb')
         real_obj = S3Object.new
-        obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
-        metadata = YAML.load(File.open(File.join(obj_root,"metadata"),'rb'))
         real_obj.name = object_name
         real_obj.md5 = metadata[:md5]
         real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
-        real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
+        real_obj.io = data.read
         real_obj.size = metadata.fetch(:size) { 0 }
         real_obj.creation_date = File.ctime(obj_root).utc.iso8601()
-        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).utc.iso8601() }
+        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root, SHUCK_METADATA_DIR, "content")).utc.iso8601() }
         return real_obj
       rescue
         puts $!
@@ -95,9 +96,19 @@ module FakeS3
     def object_metadata(bucket,object)
     end
 
-    def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name,request)
+    def copy_object(src_bucket_name, src_name, dst_bucket_name, dst_name, request)
+      dst_path = File.join(@root, dst_bucket_name, dst_name)
+      src_path = File.join(@root, src_bucket_name, src_name)
+      FileUtils.mkdir_p(File.dirname(dst_path))
+      FileUtils.cp(src_path, dst_path)
+
+      src_elems = src_name.split('/')
+      dst_elems = dst_name.split('/')
+      src_name = src_elems[0, src_elems.size-1].join('/')
+      dst_name = dst_elems[0, dst_elems.size-1].join('/')
       src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
       src_metadata_filename = File.join(src_root,"metadata")
+
       src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)
       src_content_filename = File.join(src_root,"content")
 
@@ -134,6 +145,7 @@ module FakeS3
 
       src_bucket = self.get_bucket(src_bucket_name)
       dst_bucket = self.get_bucket(dst_bucket_name)
+      dst_bucket = self.create_bucket(dst_bucket_name) unless dst_bucket
 
       obj = S3Object.new
       obj.name = dst_name
@@ -148,33 +160,27 @@ module FakeS3
       return obj
     end
 
-    def store_object(bucket,object_name,request)
+    def store_object(bucket, object_name, request)
       begin
-        filename = File.join(@root,bucket.name,object_name)
+        filename = File.join(@root, bucket.name, object_name.split('/').reverse.drop(1).reverse.join('/'))
         FileUtils.mkdir_p(filename)
 
-        metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
+        metadata_dir = File.join(filename, SHUCK_METADATA_DIR)
         FileUtils.mkdir_p(metadata_dir)
 
-        content = File.join(filename,SHUCK_METADATA_DIR,"content")
-        metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
+        content = File.join(filename, SHUCK_METADATA_DIR, 'content')
+        metadata = File.join(filename, SHUCK_METADATA_DIR, 'metadata')
+        path_file = File.join(filename, request.filename)
 
-        # TODO put a tmpfile here first and mv it over at the end
-
-        match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
-      	boundary = match[1] if match
-        if boundary
-          boundary = WEBrick::HTTPUtils::dequote(boundary)
-          filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
-          raise HTTPStatus::BadRequest if filedata['file'].empty?
-          File.open(content, 'wb') do |f|
-            f << filedata['file']
+        File.open(path_file, 'w+') do |f|
+          request.body do |chunk|
+            f << chunk
           end
-        else
-          File.open(content,'wb') do |f|
-            request.body do |chunk|
-              f << chunk
-            end
+        end
+
+        File.open(content,'wb') do |f|
+          request.body do |chunk|
+            f << chunk
           end
         end
         metadata_struct = create_metadata(content,request)
