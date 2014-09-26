@@ -16,7 +16,7 @@ module FakeS3
       @bucket_hash = {}
       Dir[File.join(root,"*")].each do |bucket|
         bucket_name = File.basename(bucket)
-        bucket_obj = Bucket.new(bucket_name,Time.now,[])
+        bucket_obj = Bucket.new(bucket_name,Time.now,get_objects(bucket_name, bucket))
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
       end
@@ -219,5 +219,12 @@ module FakeS3
       metadata[:modified_date] = File.mtime(content).utc.iso8601()
       return metadata
     end
+    
+  private
+    def get_objects bucket_name, path
+      Dir[File.join(path, '*')].map do |filepath|
+        get_object(bucket_name, File.basename(filepath), nil)
+      end
+    end    
   end
 end
