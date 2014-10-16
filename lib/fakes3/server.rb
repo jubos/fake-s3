@@ -173,10 +173,10 @@ module FakeS3
       filename = 'default'
       filename = $1 if request.body =~ /filename="(.*)"/
       key=key.gsub('${filename}', filename)
-      
+
       bucket_obj = @store.get_bucket(s_req.bucket) || @store.create_bucket(s_req.bucket)
       real_obj=@store.store_object(bucket_obj, key, s_req.webrick_request)
-      
+
       response['Etag'] = "\"#{real_obj.md5}\""
       response.body = ""
       if success_action_redirect
@@ -214,11 +214,11 @@ module FakeS3
       response.status = 204
       response.body = ""
     end
-    
+
     def do_OPTIONS(request, response)
       super
       response["Access-Control-Allow-Origin"]="*"
-    end  
+    end
 
     private
 
@@ -324,7 +324,7 @@ module FakeS3
     def normalize_post(webrick_req,s_req)
       path = webrick_req.path
       path_len = path.size
-      
+
       s_req.path = webrick_req.query['key']
 
       s_req.webrick_request = webrick_req
@@ -382,19 +382,23 @@ module FakeS3
       @hostname = hostname
       @ssl_cert_path = ssl_cert_path
       @ssl_key_path = ssl_key_path
+      webrick_config = {
+        :BindAddress => @address,
+        :Port => @port
+      }
+      if !@ssl_cert_path.to_s.empty?
+        webrick_config.merge!(
+          {
+            :SSLEnable => true,
+            :SSLCertificate => OpenSSL::X509::Certificate.new(File.read(@ssl_cert_path)),
+            :SSLPrivateKey => OpenSSL::PKey::RSA.new(File.read(@ssl_key_path))
+          }
+        )
+      end
+      @server = WEBrick::HTTPServer.new(webrick_config)
     end
 
     def serve
-      @server = if @ssl_cert_path.to_s.empty?
-        WEBrick::HTTPServer.new(:BindAddress => @address, :Port => @port)
-                else
-        WEBrick::HTTPServer.new(:BindAddress => @address,
-                                :Port => @port,
-                                :SSLEnable => true,
-                                :SSLCertificate => OpenSSL::X509::Certificate.new(File.read(@ssl_cert_path)),
-                                :SSLPrivateKey => OpenSSL::PKey::RSA.new(File.read(@ssl_key_path)))
-                end
-
       @server.mount "/", Servlet, @store,@hostname
       trap "INT" do @server.shutdown end
       @server.start
