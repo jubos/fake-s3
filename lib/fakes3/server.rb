@@ -88,6 +88,12 @@ module FakeS3
           return
         end
 
+        if_none_match = request["If-None-Match"]
+        if if_none_match == "\"#{real_obj.md5}\""
+          response.status = 304
+          return
+        end
+
         response.status = 200
         response['Content-Type'] = real_obj.content_type
         stat = File::Stat.new(real_obj.io.path)
