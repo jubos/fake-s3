@@ -89,10 +89,16 @@ module FakeS3
         end
 
         if_none_match = request["If-None-Match"]
-        if if_none_match == "\"#{real_obj.md5}\""
-          response.status = 304
-          return
+        if if_none_match == "\"#{real_obj.md5}\"" || if_none_match == "*"
+        	response.status = 304
+          	return
         end
+
+		if_modified_since = request["If-Modified-Since"]
+		if if_modified_since == Time.iso8601(real_obj.modified_date).httpdate() 
+			response.status = 304
+			return
+		end	
 
         response.status = 200
         response['Content-Type'] = real_obj.content_type
