@@ -1,7 +1,7 @@
 module FakeS3
   class S3Object
     include Comparable
-    attr_accessor :name,:size,:creation_date,:modified_date,:md5,:io,:content_type
+    attr_accessor :name,:size,:creation_date,:modified_date,:md5,:io,:content_type,:custom_metadata
 
     def hash
       @name.hash
