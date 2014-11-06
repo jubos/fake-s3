@@ -24,8 +24,7 @@ module FakeS3
       end
 
       if store.nil?
-        puts "You must specify a root to use a file store (the current default)"
-        exit(-1)
+        abort "You must specify a root to use a file store (the current default)"
       end
 
       hostname = 's3.amazonaws.com'
@@ -41,8 +40,7 @@ module FakeS3
         begin
           store.rate_limit = options[:limit]
         rescue
-          puts $!.message
-          exit(-1)
+          abort $!.message
         end
       end
 
@@ -51,8 +49,7 @@ module FakeS3
       ssl_key_path = options[:sslkey]
 
       if (ssl_cert_path.nil? && !ssl_key_path.nil?) || (!ssl_cert_path.nil? && ssl_key_path.nil?)
-        puts "If you specify an SSL certificate you must also specify an SSL certificate key"
-        exit(-1)
+        abort "If you specify an SSL certificate you must also specify an SSL certificate key"
       end
 
       puts "Loading FakeS3 with #{root} on port #{options[:port]} with hostname #{hostname}"
