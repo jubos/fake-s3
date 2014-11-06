@@ -1,7 +1,7 @@
 ## Introduction
-FakeS3 is a lightweight server that responds to the same calls Amazon S3 responds to.  
+FakeS3 is a lightweight server that responds to the same calls Amazon S3 responds to.
 It is extremely useful for testing of S3 in a sandbox environment without actually
-making calls to Amazon, which not only require network, but also cost you precious dollars.  
+making calls to Amazon, which not only require network, but also cost you precious dollars.
 
 The goal of Fake S3 is to minimize runtime dependencies and be more of a
 development tool to test S3 calls in your code rather than a production server
@@ -31,6 +31,20 @@ Here is a running list of [supported clients](https://github.com/jubos/fake-s3/w
 
 ## Running Tests
 
+There are some pre-requesites to actually being able to run the unit/integration tests
+
+### On OSX
+
+Edit your /etc/hosts and add the following line:
+
+    127.0.0.1 posttest.localhost
+
+Then ensure that the following packages are installed (boto, s3cmd)
+
+    > pip install boto
+    > brew install s3cmd
+
+
 Start the test server using
 
     rake test_server
@@ -39,7 +53,7 @@ Then in another terminal window run
 
     rake test
 
-It is a TODO to get this to be just one command
+It is a still a TODO to get this to be just one command
 
 ## More Information
 
