@@ -47,16 +47,8 @@ module FakeS3
       end
 
       address = options[:address] || '0.0.0.0'
-
-      ssl_cert_path = nil
-      if options[:sslcert]
-        ssl_cert_path = options[:sslcert]
-      end
-
-      ssl_key_path = nil
-      if options[:sslkey]
-        ssl_key_path = options[:sslkey]
-      end
+      ssl_cert_path = options[:sslcert]
+      ssl_key_path = options[:sslkey]
 
       if (ssl_cert_path.nil? && !ssl_key_path.nil?) || (!ssl_cert_path.nil? && ssl_key_path.nil?)
         puts "If you specify an SSL certificate you must also specify an SSL certificate key"
