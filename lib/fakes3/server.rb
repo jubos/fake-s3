@@ -1,5 +1,7 @@
 require 'time'
 require 'webrick'
+require 'webrick/https'
+require 'openssl'
 require 'fakes3/file_store'
 require 'fakes3/xml_adapter'
 require 'fakes3/bucket_query'
@@ -373,15 +375,45 @@ module FakeS3
 
 
   class Server
-    def initialize(address,port,store,hostname)
+    def initialize(address,port,store,hostname,enable_ssl,key,cert)
       @address = address
       @port = port
       @store = store
       @hostname = hostname
+      @enable_ssl = enable_ssl
+      @key = nil
+      if key != nil
+        begin
+          @key = OpenSSL::PKey::RSA.new(File.open(key).read)
+        rescue
+          puts $!.message
+          exit(-1)
+        end
+      end  
+      if not @key.private?
+        puts "The key provided is not a private key."
+        exit(-1)
+      end
+
+      @cert = nil
+      if cert != nil
+        begin
+          @cert = OpenSSL::X509::Certificate.new(File.open(cert).read)
+        rescue
+          puts $!.message
+          exit(-1)
+        end
+      end
     end
 
     def serve
-      @server = WEBrick::HTTPServer.new(:BindAddress => @address, :Port => @port)
+      @server = WEBrick::HTTPServer.new(:BindAddress => @address,
+                                        :Port => @port,
+                                        :SSLEnable => @enable_ssl,
+                                        :SSLVerifyClient  => OpenSSL::SSL::VERIFY_NONE,
+                                        :SSLCertificate   => @cert,
+                                        :SSLPrivateKey    => @key,
+                                        :SSLCertName      => nil)
       @server.mount "/", Servlet, @store,@hostname
       trap "INT" do @server.shutdown end
       @server.start
