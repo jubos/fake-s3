@@ -2,6 +2,7 @@ require 'test/test_helper'
 require 'fileutils'
 #require 'fakes3/server'
 require 'right_aws'
+require 'time'
 
 class RightAWSCommandsTest < Test::Unit::TestCase
 
@@ -122,7 +123,7 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     obj = @s3.get("s3media","if_none_match_test")
     tag = obj[:headers]["etag"]
     begin
-      empty = @s3.get("s3media", "if_none_match_test", {"If-None-Match"=>tag})
+      @s3.get("s3media", "if_none_match_test", {"If-None-Match"=>tag})
     rescue URI::InvalidURIError
       # expected error for 304
     else
@@ -138,15 +139,22 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     obj = @s3.get("s3media","if_modified_since_test")
     modified = obj[:headers]["last-modified"]
     begin
-      empty = @s3.get("s3media", "if_modified_since_test", {"If-Modified-Since"=>modified})
+      @s3.get("s3media", "if_modified_since_test", {"If-Modified-Since"=>modified})
     rescue URI::InvalidURIError
       # expected error for 304
     else
       fail 'Should have encountered an error due to the server not returning a response due to caching'
     end
-    @s3.put("s3media","if_modified_since_test","Hello World 2!")
-    obj = @s3.get("s3media", "if_none_match_test", {"If-Modified-Since"=>modified})
-    assert_equal "Hello World 2!",obj[:object]
+    # Granularity of an HTTP Date is 1 second which isn't enough for the test
+    # so manually rewind the clock by a second
+    timeInThePast = Time.httpdate(modified) - 1
+    begin
+      obj = @s3.get("s3media", "if_modified_since_test", {"If-Modified-Since"=>timeInThePast.httpdate()})
+    rescue
+      fail 'Should have been downloaded since the date is in the past now'
+    else
+      #expected scenario
+    end
   end
 
 end
