@@ -89,7 +89,7 @@ module FakeS3
         end
 
         if_none_match = request["If-None-Match"]
-        if if_none_match == "\"#{real_obj.md5}\"" || if_none_match == "*"
+        if if_none_match == "\"#{real_obj.md5}\"" or if_none_match == "*"
         	response.status = 304
           	return
         end
