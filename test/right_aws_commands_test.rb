@@ -117,4 +117,36 @@ class RightAWSCommandsTest < Test::Unit::TestCase
 
   end
 
+  def test_if_none_match
+    @s3.put("s3media","if_none_match_test","Hello World 1!")
+    obj = @s3.get("s3media","if_none_match_test")
+    tag = obj[:headers]["etag"]
+    begin
+      empty = @s3.get("s3media", "if_none_match_test", {"If-None-Match"=>tag})
+    rescue URI::InvalidURIError
+      # expected error for 304
+    else
+      fail 'Should have encountered an error due to the server not returning a response due to caching'
+    end
+    @s3.put("s3media","if_none_match_test","Hello World 2!")
+    obj = @s3.get("s3media", "if_none_match_test", {"If-None-Match"=>tag})
+    assert_equal "Hello World 2!",obj[:object]
+  end
+
+  def test_if_modified_since
+    @s3.put("s3media","if_modified_since_test","Hello World 1!")
+    obj = @s3.get("s3media","if_modified_since_test")
+    modified = obj[:headers]["last-modified"]
+    begin
+      empty = @s3.get("s3media", "if_modified_since_test", {"If-Modified-Since"=>modified})
+    rescue URI::InvalidURIError
+      # expected error for 304
+    else
+      fail 'Should have encountered an error due to the server not returning a response due to caching'
+    end
+    @s3.put("s3media","if_modified_since_test","Hello World 2!")
+    obj = @s3.get("s3media", "if_none_match_test", {"If-Modified-Since"=>modified})
+    assert_equal "Hello World 2!",obj[:object]
+  end
+
 end
