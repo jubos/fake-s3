@@ -96,11 +96,14 @@ module FakeS3
           	return
         end
 
-		if_modified_since = request["If-Modified-Since"]
-		if if_modified_since == Time.iso8601(real_obj.modified_date).httpdate() 
-			response.status = 304
-			return
-		end	
+    		if_modified_since = request["If-Modified-Since"]
+        if if_modified_since
+          time = Time.httpdate(if_modified_since)
+      		if time >= Time.iso8601(real_obj.modified_date)
+      			response.status = 304
+      			return
+      		end	
+        end
 
         response.status = 200
         response['Content-Type'] = real_obj.content_type
