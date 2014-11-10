@@ -219,12 +219,13 @@ module FakeS3
       metadata[:content_type] = request.header["content-type"].first
       metadata[:size] = File.size(content)
       metadata[:modified_date] = File.mtime(content).utc.iso8601()
+      metadata[:custom_metadata] = {}
 
       # Add custom metadata from the request header
       request.header.each do |key, value|
         match = /^x-amz-meta-(.*)$/.match(key)
-        if match
-          metadata_struct[:custom_metadata][match[1]] = value.join(', ')
+        if match && (match_key = match[1])
+          metadata[:custom_metadata][match_key] = value.join(', ')
         end
       end
       return metadata
