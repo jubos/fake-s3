@@ -162,7 +162,7 @@ module FakeS3
 
     def do_PUT(request,response)
       s_req = normalize_request(request)
-      query = CGI::parse(request.request_uri.query)
+      query = CGI::parse(request.request_uri.query || "")
 
       response.status = 200
       response.body = ""
@@ -200,7 +200,7 @@ module FakeS3
     def do_POST(request,response)
       s_req = normalize_request(request)
       key   = request.query['key']
-      query = CGI::parse(request.request_uri.query)
+      query = CGI::parse(request.request_uri.query || "")
 
       if query.has_key?('uploads')
         upload_id = SecureRandom.hex
