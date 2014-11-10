@@ -9,6 +9,11 @@ require 'yaml'
 module FakeS3
   class FileStore
     SHUCK_METADATA_DIR = ".fakes3_metadataFFF"
+    # S3 clients with overly strict date parsing fails to parse ISO 8601 dates
+    # without any sub second precision (e.g. jets3t v0.7.2), and the examples
+    # given in the official AWS S3 documentation specify three (3) decimals for
+    # sub second precision.
+    SUBSECOND_PRECISION = 3
 
     def initialize(root)
       @root = root
@@ -82,8 +87,10 @@ module FakeS3
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
         real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
         real_obj.size = metadata.fetch(:size) { 0 }
-        real_obj.creation_date = File.ctime(obj_root).utc.iso8601()
-        real_obj.modified_date = metadata.fetch(:modified_date) { File.mtime(File.join(obj_root,"content")).utc.iso8601() }
+        real_obj.creation_date = File.ctime(obj_root).utc.iso8601(SUBSECOND_PRECISION)
+        real_obj.modified_date = metadata.fetch(:modified_date) do
+          File.mtime(File.join(obj_root,"content")).utc.iso8601(SUBSECOND_PRECISION)
+        end
         real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
         return real_obj
       rescue
@@ -218,7 +225,7 @@ module FakeS3
       metadata[:md5] = Digest::MD5.file(content).hexdigest
       metadata[:content_type] = request.header["content-type"].first
       metadata[:size] = File.size(content)
-      metadata[:modified_date] = File.mtime(content).utc.iso8601()
+      metadata[:modified_date] = File.mtime(content).utc.iso8601(SUBSECOND_PRECISION)
       metadata[:custom_metadata] = {}
 
       # Add custom metadata from the request header
