@@ -2,6 +2,8 @@ require 'time'
 require 'webrick'
 require 'webrick/https'
 require 'openssl'
+require 'securerandom'
+require 'cgi'
 require 'fakes3/file_store'
 require 'fakes3/xml_adapter'
 require 'fakes3/bucket_query'
@@ -160,66 +162,100 @@ module FakeS3
 
     def do_PUT(request,response)
       s_req = normalize_request(request)
+      query = CGI::parse(request.request_uri.query)
 
       response.status = 200
       response.body = ""
       response['Content-Type'] = "text/xml"
       response['Access-Control-Allow-Origin'] = '*'
 
-      case s_req.type
-      when Request::COPY
-        object = @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object,request)
-        response.body = XmlAdapter.copy_object_result(object)
-      when Request::STORE
-        bucket_obj = @store.get_bucket(s_req.bucket)
-        if !bucket_obj
-          # Lazily create a bucket.  TODO fix this to return the proper error
-          bucket_obj = @store.create_bucket(s_req.bucket)
-        end
+      if query.empty?
+        case s_req.type
+        when Request::COPY
+          object = @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object,request)
+          response.body = XmlAdapter.copy_object_result(object)
+        when Request::STORE
+          bucket_obj = @store.get_bucket(s_req.bucket)
+          if !bucket_obj
+            # Lazily create a bucket.  TODO fix this to return the proper error
+            bucket_obj = @store.create_bucket(s_req.bucket)
+          end
 
-        real_obj = @store.store_object(bucket_obj,s_req.object,s_req.webrick_request)
+          real_obj = @store.store_object(bucket_obj,s_req.object,s_req.webrick_request)
+          response.header['ETag'] = "\"#{real_obj.md5}\""
+        when Request::CREATE_BUCKET
+          @store.create_bucket(s_req.bucket)
+        end
+      else
+        # Multipart upload.
+        part_number = query['partNumber'].first
+        upload_id   = query['uploadId'].first
+        bucket_obj  = @store.get_bucket(s_req.bucket)
+
+        real_obj = @store.store_object_part(bucket_obj, upload_id, part_number, request)
         response.header['ETag'] = "\"#{real_obj.md5}\""
-      when Request::CREATE_BUCKET
-        @store.create_bucket(s_req.bucket)
       end
     end
 
     def do_POST(request,response)
-      # check that we've received file data
-      unless request.content_type =~ /^multipart\/form-data; boundary=(.+)/
+      s_req = normalize_request(request)
+      key   = request.query['key']
+      query = CGI::parse(request.request_uri.query)
+
+      if query.has_key?('uploads')
+        upload_id = SecureRandom.hex
+
+        response.body = <<-eos.strip
+          <?xml version="1.0" encoding="UTF-8"?>
+          <InitiateMultipartUploadResult>
+            <Bucket>#{ s_req.bucket }</Bucket>
+            <Key>#{ key }</Key>
+            <UploadId>#{ upload_id }</UploadId>
+          </InitiateMultipartUploadResult>
+        eos
+      elsif query.has_key?('uploadId')
+        upload_id = query['uploadId'].first
+        key        = request.path_info
+
+        bucket_obj = @store.get_bucket(s_req.bucket)
+        real_obj   = @store.combine_object_parts(bucket_obj, upload_id, key)
+      elsif request.content_type =~ /^multipart\/form-data; boundary=(.+)/
+        key=request.query['key']
+
+        success_action_redirect = request.query['success_action_redirect']
+        success_action_status   = request.query['success_action_status']
+
+        filename = 'default'
+        filename = $1 if request.body =~ /filename="(.*)"/
+        key      = key.gsub('${filename}', filename)
+
+        bucket_obj = @store.get_bucket(s_req.bucket) || @store.create_bucket(s_req.bucket)
+        real_obj   = @store.store_object(bucket_obj, key, s_req.webrick_request)
+
+        response['Etag'] = "\"#{real_obj.md5}\""
+
+        if success_action_redirect
+          response.status      = 307
+          response.body        = ""
+          response['Location'] = success_action_redirect
+        else
+          response.status = success_action_status || 204
+          if response.status == "201"
+            response.body = <<-eos.strip
+              <?xml version="1.0" encoding="UTF-8"?>
+              <PostResponse>
+                <Location>http://#{s_req.bucket}.localhost:#{@port}/#{key}</Location>
+                <Bucket>#{s_req.bucket}</Bucket>
+                <Key>#{key}</Key>
+                <ETag>#{response['Etag']}</ETag>
+              </PostResponse>
+            eos
+          end
+        end
+      else
         raise WEBrick::HTTPStatus::BadRequest
       end
-      s_req = normalize_request(request)
-      key=request.query['key']
-      success_action_redirect=request.query['success_action_redirect']
-      success_action_status=request.query['success_action_status']
 
-      filename = 'default'
-      filename = $1 if request.body =~ /filename="(.*)"/
-      key=key.gsub('${filename}', filename)
-
-      bucket_obj = @store.get_bucket(s_req.bucket) || @store.create_bucket(s_req.bucket)
-      real_obj=@store.store_object(bucket_obj, key, s_req.webrick_request)
-
-      response['Etag'] = "\"#{real_obj.md5}\""
-      response.body = ""
-      if success_action_redirect
-        response.status = 307
-        response['Location']=success_action_redirect
-      else
-        response.status = success_action_status || 204
-        if response.status=="201"
-          response.body= <<-eos.strip
-            <?xml version="1.0" encoding="UTF-8"?>
-            <PostResponse>
-              <Location>http://#{s_req.bucket}.localhost:#{@port}/#{key}</Location>
-              <Bucket>#{s_req.bucket}</Bucket>
-              <Key>#{key}</Key>
-              <ETag>#{response['Etag']}</ETag>
-            </PostResponse>
-          eos
-        end
-      end
       response['Content-Type'] = 'text/xml'
       response['Access-Control-Allow-Origin'] = '*'
     end

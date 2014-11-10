@@ -5,6 +5,7 @@ require 'fakes3/bucket'
 require 'fakes3/rate_limitable_file'
 require 'digest/md5'
 require 'yaml'
+require 'ostruct'
 
 module FakeS3
   class FileStore
@@ -155,7 +156,64 @@ module FakeS3
       return obj
     end
 
-    def store_object(bucket,object_name,request)
+    def store_object_part(bucket, upload_id, part_number, request)
+      upload_path = File.join(@root, bucket.name, '_uploads', upload_id)
+      FileUtils.mkdir_p(upload_path)
+
+      part_file = "part#{ "%04d" % part_number.to_i }"
+      part_path = File.join(upload_path, part_file)
+      File.open(part_path, 'wb') do |f|
+        request.body { |chunk| f << chunk }
+      end
+
+      metadata = create_metadata(part_path, request)
+      obj = S3Object.new
+      obj.md5 = metadata[:md5]
+
+      obj
+    end
+
+    def combine_object_parts(bucket, upload_id, object_name)
+      upload_path = File.join(@root, bucket.name, '_uploads', upload_id)
+      body        = ""
+
+      Dir["#{ upload_path }/part*"].sort.each do |part|
+        File.open(part, 'rb') do |f|
+          body << f.read
+        end
+      end
+
+      # Have to duplicate this for now
+      filename = File.join(@root,bucket.name,object_name)
+      FileUtils.mkdir_p(filename)
+
+      metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
+      FileUtils.mkdir_p(metadata_dir)
+
+      content = File.join(filename,SHUCK_METADATA_DIR,"content")
+      metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
+
+      File.open(content, 'wb') { |f| f << body }
+
+      request = OpenStruct.new(header: {'content-type' => []})
+      metadata_struct = create_metadata(content,request)
+
+      File.open(metadata,'w') do |f|
+        f << YAML::dump(metadata_struct)
+      end
+
+      obj = S3Object.new
+      obj.name = object_name
+      obj.md5 = metadata_struct[:md5]
+      obj.content_type = metadata_struct[:content_type]
+      obj.size = metadata_struct[:size]
+      obj.modified_date = metadata_struct[:modified_date]
+
+      bucket.add(obj)
+      return obj
+    end
+
+    def store_object(bucket, object_name, request)
       begin
         filename = File.join(@root,bucket.name,object_name)
         FileUtils.mkdir_p(filename)
@@ -167,9 +225,10 @@ module FakeS3
         metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
 
         # TODO put a tmpfile here first and mv it over at the end
+        content_type = request.content_type || ""
 
-        match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
-      	boundary = match[1] if match
+        match = content_type.match(/^multipart\/form-data; boundary=(.+)/)
+        boundary = match[1] if match
         if boundary
           boundary = WEBrick::HTTPUtils::dequote(boundary)
           filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
