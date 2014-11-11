@@ -89,7 +89,12 @@ module FakeS3
           response['Content-Type'] = "application/xml"
           return
         end
-
+        expiry = Time.at(request.query['Expires'].to_i)
+        if expiry < Time.now
+          response.status = 403
+          response.body = ""
+          return
+        end
         response.status = 200
         response['Content-Type'] = real_obj.content_type
         stat = File::Stat.new(real_obj.io.path)
