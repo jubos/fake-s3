@@ -141,8 +141,8 @@ module FakeS3
         end
       end
 
-      src_bucket = self.get_bucket(src_bucket_name)
-      dst_bucket = self.get_bucket(dst_bucket_name)
+      src_bucket = get_bucket(src_bucket_name) || create_bucket(src_bucket_name)
+      dst_bucket = get_bucket(dst_bucket_name) || create_bucket(dst_bucket_name)
 
       obj = S3Object.new
       obj.name = dst_name
