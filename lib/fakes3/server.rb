@@ -223,6 +223,16 @@ module FakeS3
 
         bucket_obj = @store.get_bucket(s_req.bucket)
         real_obj   = @store.combine_object_parts(bucket_obj, upload_id, key)
+
+        response.body <<-eos.strip
+          <?xml version="1.0" encoding="UTF-8"?>
+          <CompleteMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+            <Location>http://#{ s_req.bucket }.localhost:#{@port}/#{key}</Location>
+            <Bucket>#{ s_req.bucket }</Bucket>
+            <Key>#{ key }</Key>
+            <ETag>"#{ real_obj.md5 }"</ETag>
+          </CompleteMultipartUploadResult>
+        eos
       elsif request.content_type =~ /^multipart\/form-data; boundary=(.+)/
         key=request.query['key']
 
