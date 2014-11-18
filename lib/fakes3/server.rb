@@ -195,6 +195,9 @@ module FakeS3
         real_obj = @store.store_object_part(bucket_obj, upload_id, part_number, request)
         response.header['ETag'] = "\"#{real_obj.md5}\""
       end
+
+      response["Access-Control-Allow-Origin"]="*"
+      response['Access-Control-Allow-Headers']='Authorization, Content-Length'
     end
 
     def do_POST(request,response)
