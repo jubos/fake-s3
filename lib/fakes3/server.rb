@@ -282,7 +282,7 @@ module FakeS3
     def do_OPTIONS(request, response)
       super
       response["Access-Control-Allow-Origin"] = "*"
-      response["Access-Control-Allow-Methods"] = "HEAD, GET, PUT, POST"
+      response["Access-Control-Allow-Methods"] = "HEAD, GET, PUT, POST, OPTIONS"
       response["Access-Control-Allow-Headers"] = "accept, content-type, Authorization, Content-Length"
       response["Access-Control-Expose-Headers"] = "ETag, x-amz-meta-custom-header"
     end
