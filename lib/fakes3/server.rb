@@ -111,7 +111,7 @@ module FakeS3
           if time >= Time.iso8601(real_obj.modified_date)
             response.status = 304
             return
-          end 
+          end
         end
 
         response.status = 200
@@ -258,6 +258,7 @@ module FakeS3
 
       response['Content-Type'] = 'text/xml'
       response['Access-Control-Allow-Origin'] = '*'
+      response['Access-Control-Allow-Headers'] = 'Authorization, Content-Length'
     end
 
     def do_DELETE(request,response)
@@ -279,7 +280,7 @@ module FakeS3
       super
       response["Access-Control-Allow-Origin"] = "*"
       response["Access-Control-Allow-Methods"] = "HEAD, GET, PUT, POST"
-      response["Access-Control-Allow-Headers"] = "accept, content-type"
+      response["Access-Control-Allow-Headers"] = "accept, content-type, Authorization, Content-Length"
       response["Access-Control-Expose-Headers"] = "ETag, x-amz-meta-custom-header"
     end
 
