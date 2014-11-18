@@ -197,7 +197,7 @@ module FakeS3
       end
 
       response["Access-Control-Allow-Origin"]="*"
-      response['Access-Control-Allow-Headers']='Authorization, Content-Length'
+      response['Access-Control-Allow-Headers']='Authorization, Content-Length, ETag'
     end
 
     def do_POST(request,response)
@@ -283,7 +283,7 @@ module FakeS3
       super
       response["Access-Control-Allow-Origin"] = "*"
       response["Access-Control-Allow-Methods"] = "HEAD, GET, PUT, POST, OPTIONS"
-      response["Access-Control-Allow-Headers"] = "accept, content-type, Authorization, Content-Length"
+      response["Access-Control-Allow-Headers"] = "accept, content-type, Authorization, Content-Length, ETag"
       response["Access-Control-Expose-Headers"] = "ETag, x-amz-meta-custom-header"
     end
 
