@@ -152,7 +152,6 @@ module FakeS3
 
       src_obj = src_bucket.find(src_name)
       dst_bucket.add(obj)
-      src_bucket.remove(src_obj)
       return obj
     end
 
