@@ -156,31 +156,21 @@ module FakeS3
       return obj
     end
 
-    def store_object_part(bucket, upload_id, part_number, request)
-      upload_path = File.join(@root, bucket.name, '_uploads', upload_id)
-      FileUtils.mkdir_p(upload_path)
+    def combine_object_parts(bucket, upload_id, object_name, parts)
+      upload_path = File.join(@root, bucket.name)
+      chunks      = {}
 
-      part_file = "part#{ "%04d" % part_number.to_i }"
-      part_path = File.join(upload_path, part_file)
-      File.open(part_path, 'wb') do |f|
-        request.body { |chunk| f << chunk }
+      Dir["#{ upload_path }/#{upload_id}_#{object_name}_part*"].each do |part|
+        content = File.join(part, SHUCK_METADATA_DIR, 'content')
+        File.open(content, 'rb') do |f|
+          chunk = f.read
+          chunks[Digest::MD5.hexdigest(chunk)] = chunk
+        end
       end
 
-      metadata = create_metadata(part_path, request)
-      obj = S3Object.new
-      obj.md5 = metadata[:md5]
-
-      obj
-    end
-
-    def combine_object_parts(bucket, upload_id, object_name)
-      upload_path = File.join(@root, bucket.name, '_uploads', upload_id)
-      body        = ""
-
-      Dir["#{ upload_path }/part*"].sort.each do |part|
-        File.open(part, 'rb') do |f|
-          body << f.read
-        end
+      body = ""
+      parts.sort_by { |part| part[:number] }.each do |part|
+        body << chunks[part[:etag]]
       end
 
       # Have to duplicate this for now

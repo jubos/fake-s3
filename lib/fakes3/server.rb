@@ -195,21 +195,21 @@ module FakeS3
 
       part_number = query['partNumber'].first
       upload_id   = query['uploadId'].first
+      part_name   = "#{upload_id}_#{s_req.object}_part#{part_number}"
 
       # store the part
       if s_req.type = Request::COPY
         real_obj = @store.copy_object(
           s_req.src_bucket, s_req.src_object,
-          s_req.bucket    , s_req.object,
+          s_req.bucket    , part_name,
           request
         )
 
         response.body = XmlAdapter.copy_object_result real_obj
       else
         bucket_obj  = @store.get_bucket(s_req.bucket)
-        real_obj    = @store.store_object_part(
-          bucket_obj,
-          upload_id , part_number,
+        real_obj    = @store.store_object(
+          bucket_obj, part_name,
           request
         )
 
@@ -241,21 +241,17 @@ module FakeS3
           </InitiateMultipartUploadResult>
         eos
       elsif query.has_key?('uploadId')
-        upload_id = query['uploadId'].first
-        key        = request.path_info
+        upload_id  = query['uploadId'].first
 
         bucket_obj = @store.get_bucket(s_req.bucket)
-        real_obj   = @store.combine_object_parts(bucket_obj, upload_id, key)
+        real_obj   = @store.combine_object_parts(
+          bucket_obj,
+          upload_id,
+          request.path[1..-1],
+          parse_complete_multipart_upload(request)
+        )
 
-        response.body = <<-eos.strip
-          <?xml version="1.0" encoding="UTF-8"?>
-          <CompleteMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-            <Location>http://#{ s_req.bucket }.localhost:#{@port}/#{key}</Location>
-            <Bucket>#{ s_req.bucket }</Bucket>
-            <Key>#{ key }</Key>
-            <ETag>"#{ real_obj.md5 }"</ETag>
-          </CompleteMultipartUploadResult>
-        eos
+        response.body = XmlAdapter.complete_multipart_result real_obj
       elsif request.content_type =~ /^multipart\/form-data; boundary=(.+)/
         key=request.query['key']
 
@@ -467,6 +463,21 @@ module FakeS3
       validate_request(s_req)
 
       return s_req
+    end
+
+    def parse_complete_multipart_upload request
+      parts_xml   = ""
+      request.body { |chunk| parts_xml << chunk }
+
+      # TODO: I suck at parsing xml
+      parts_xml = parts_xml.scan /\<Part\>.*?<\/Part\>/m
+
+      parts_xml.collect do |xml|
+        {
+          number: xml[/\<PartNumber\>(\d+)\<\/PartNumber\>/, 1].to_i,
+          etag:   xml[/\<ETag\>\"(.+)\"\<\/ETag\>/, 1]
+        }
+      end
     end
 
     def dump_request(request)
