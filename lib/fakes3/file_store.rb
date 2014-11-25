@@ -104,7 +104,7 @@ module FakeS3
     def object_metadata(bucket,object)
     end
 
-    def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name,request)
+    def copy_object(src_bucket_name, src_name, dst_bucket_name, dst_name, request)
       src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
       src_metadata_filename = File.join(src_root,"metadata")
       src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)

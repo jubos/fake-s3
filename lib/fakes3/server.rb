@@ -161,44 +161,62 @@ module FakeS3
     end
 
     def do_PUT(request,response)
-      s_req = normalize_request(request)
-      query = CGI::parse(request.request_uri.query || "")
+      # TODO: maybe not the best check whether this is a multipart request
+      return do_multipartPUT(request, response) if request.request_uri.query
 
       response.status = 200
       response.body = ""
       response['Content-Type'] = "text/xml"
       response['Access-Control-Allow-Origin'] = '*'
 
-      if query.empty?
-        case s_req.type
-        when Request::COPY
-          object = @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object,request)
-          response.body = XmlAdapter.copy_object_result(object)
-        when Request::STORE
-          bucket_obj = @store.get_bucket(s_req.bucket)
-          if !bucket_obj
-            # Lazily create a bucket.  TODO fix this to return the proper error
-            bucket_obj = @store.create_bucket(s_req.bucket)
-          end
-
-          real_obj = @store.store_object(bucket_obj,s_req.object,s_req.webrick_request)
-          response.header['ETag'] = "\"#{real_obj.md5}\""
-        when Request::CREATE_BUCKET
-          @store.create_bucket(s_req.bucket)
+      case s_req.type
+      when Request::COPY
+        object = @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object,request)
+        response.body = XmlAdapter.copy_object_result(object)
+      when Request::STORE
+        bucket_obj = @store.get_bucket(s_req.bucket)
+        if !bucket_obj
+          # Lazily create a bucket.  TODO fix this to return the proper error
+          bucket_obj = @store.create_bucket(s_req.bucket)
         end
-      else
-        # Multipart upload.
-        part_number = query['partNumber'].first
-        upload_id   = query['uploadId'].first
-        bucket_obj  = @store.get_bucket(s_req.bucket)
 
-        real_obj = @store.store_object_part(bucket_obj, upload_id, part_number, request)
+        real_obj = @store.store_object(bucket_obj,s_req.object,s_req.webrick_request)
         response.header['ETag'] = "\"#{real_obj.md5}\""
+      when Request::CREATE_BUCKET
+        @store.create_bucket(s_req.bucket)
+      end
+    end
+
+    def do_multipartPUT(request, response)
+      s_req = normalize_request(request)
+      query = CGI::parse(request.request_uri.query)
+
+      part_number = query['partNumber'].first
+      upload_id   = query['uploadId'].first
+
+      # store the part
+      if s_req.type = Request::COPY
+        real_obj = @store.copy_object(
+          s_req.src_bucket, s_req.src_object,
+          s_req.bucket    , s_req.object,
+          request
+        )
+      else
+        bucket_obj  = @store.get_bucket(s_req.bucket)
+        real_obj    = @store.store_object_part(
+          bucket_obj,
+          upload_id , part_number,
+          request
+        )
       end
 
       response['Access-Control-Allow-Origin']   = '*'
-      response['Access-Control-Allow-Headers']  = 'Authorization, Content-Length, ETag'
+      response['Access-Control-Allow-Headers']  = 'Authorization, Content-Length'
       response['Access-Control-Expose-Headers'] = 'ETag'
+
+      response.status = 200
+      response.body   = ""
+      response.header['ETag']  = "\"#{real_obj.md5}\""
     end
 
     def do_POST(request,response)
@@ -389,9 +407,11 @@ module FakeS3
         end
       end
 
+      # TODO: also parse the x-amz-copy-source-range:bytes=first-last header
+      # for multipart copy
       copy_source = webrick_req.header["x-amz-copy-source"]
       if copy_source and copy_source.size == 1
-        src_elems = copy_source.first.split("/")
+        src_elems   = copy_source.first.split("/")
         root_offset = src_elems[0] == "" ? 1 : 0
         s_req.src_bucket = src_elems[root_offset]
         s_req.src_object = src_elems[1 + root_offset,src_elems.size].join("/")
