@@ -156,54 +156,26 @@ module FakeS3
       return obj
     end
 
-    def combine_object_parts(bucket, upload_id, object_name, parts)
-      upload_path = File.join(@root, bucket.name)
-      chunks      = {}
+    def store_object(bucket, object_name, request)
+      filedata = ""
 
-      Dir["#{ upload_path }/#{upload_id}_#{object_name}_part*"].each do |part|
-        content = File.join(part, SHUCK_METADATA_DIR, 'content')
-        File.open(content, 'rb') do |f|
-          chunk = f.read
-          chunks[Digest::MD5.hexdigest(chunk)] = chunk
-        end
+      # TODO put a tmpfile here first and mv it over at the end
+      content_type = request.content_type || ""
+
+      match = content_type.match(/^multipart\/form-data; boundary=(.+)/)
+      boundary = match[1] if match
+      if boundary
+        boundary = WEBrick::HTTPUtils::dequote(boundary)
+        filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
+        raise HTTPStatus::BadRequest if filedata['file'].empty?
+      else
+        request.body { |chunk| filedata << chunk }
       end
 
-      body = ""
-      parts.sort_by { |part| part[:number] }.each do |part|
-        body << chunks[part[:etag]]
-      end
-
-      # Have to duplicate this for now
-      filename = File.join(@root,bucket.name,object_name)
-      FileUtils.mkdir_p(filename)
-
-      metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
-      FileUtils.mkdir_p(metadata_dir)
-
-      content = File.join(filename,SHUCK_METADATA_DIR,"content")
-      metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
-
-      File.open(content, 'wb') { |f| f << body }
-
-      request = OpenStruct.new(header: {'content-type' => []})
-      metadata_struct = create_metadata(content,request)
-
-      File.open(metadata,'w') do |f|
-        f << YAML::dump(metadata_struct)
-      end
-
-      obj = S3Object.new
-      obj.name = object_name
-      obj.md5 = metadata_struct[:md5]
-      obj.content_type = metadata_struct[:content_type]
-      obj.size = metadata_struct[:size]
-      obj.modified_date = metadata_struct[:modified_date]
-
-      bucket.add(obj)
-      return obj
+      do_store_object(bucket, object_name, filedata, request)
     end
 
-    def store_object(bucket, object_name, request)
+    def do_store_object(bucket, object_name, filedata, request)
       begin
         filename = File.join(@root,bucket.name,object_name)
         FileUtils.mkdir_p(filename)
@@ -211,30 +183,12 @@ module FakeS3
         metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
         FileUtils.mkdir_p(metadata_dir)
 
-        content = File.join(filename,SHUCK_METADATA_DIR,"content")
+        content  = File.join(filename,SHUCK_METADATA_DIR,"content")
         metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
 
-        # TODO put a tmpfile here first and mv it over at the end
-        content_type = request.content_type || ""
+        File.open(content,'wb') { |f| f << filedata }
 
-        match = content_type.match(/^multipart\/form-data; boundary=(.+)/)
-        boundary = match[1] if match
-        if boundary
-          boundary = WEBrick::HTTPUtils::dequote(boundary)
-          filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
-          raise HTTPStatus::BadRequest if filedata['file'].empty?
-          File.open(content, 'wb') do |f|
-            f << filedata['file']
-          end
-        else
-          File.open(content,'wb') do |f|
-            request.body do |chunk|
-              f << chunk
-            end
-          end
-        end
         metadata_struct = create_metadata(content,request)
-
         File.open(metadata,'w') do |f|
           f << YAML::dump(metadata_struct)
         end
@@ -255,6 +209,36 @@ module FakeS3
       end
     end
 
+    def combine_object_parts(bucket, upload_id, object_name, parts, request)
+      upload_path   = File.join(@root, bucket.name)
+      base_path     = File.join(upload_path, "#{upload_id}_#{object_name}")
+
+      complete_file = ""
+      chunk         = ""
+      part_paths    = []
+
+      parts.sort_by { |part| part[:number] }.each do |part|
+        part_path    = "#{base_path}_part#{part[:number]}"
+        content_path = File.join(part_path, SHUCK_METADATA_DIR, 'content')
+
+        File.open(content_path, 'rb') { |f| chunk = f.read }
+        etag = Digest::MD5.hexdigest(chunk)
+
+        raise new Error "invalid file chunk" unless part[:etag] == etag
+        complete_file << chunk
+        part_paths    << part_path
+      end
+
+      object = do_store_object(bucket, object_name, complete_file, request)
+
+      # clean up parts
+      part_paths.each do |path|
+        FileUtils.remove_dir(path)
+      end
+
+      object
+    end
+
     def delete_object(bucket,object_name,request)
       begin
         filename = File.join(@root,bucket.name,object_name)
@@ -268,6 +252,7 @@ module FakeS3
       end
     end
 
+    # TODO: abstract getting meta data from request.
     def create_metadata(content,request)
       metadata = {}
       metadata[:md5] = Digest::MD5.file(content).hexdigest

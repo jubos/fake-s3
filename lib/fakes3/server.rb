@@ -248,7 +248,8 @@ module FakeS3
           bucket_obj,
           upload_id,
           request.path[1..-1],
-          parse_complete_multipart_upload(request)
+          parse_complete_multipart_upload(request),
+          request
         )
 
         response.body = XmlAdapter.complete_multipart_result real_obj
