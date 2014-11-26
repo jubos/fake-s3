@@ -161,10 +161,10 @@ module FakeS3
     end
 
     def do_PUT(request,response)
-      # TODO: maybe not the best check whether this is a multipart request
-      return do_multipartPUT(request, response) if request.request_uri.query
-
       s_req = normalize_request(request)
+      query = CGI::parse(request.request_uri.query || "")
+
+      return do_multipartPUT(request, response) if query['uploadId'].first
 
       response.status = 200
       response.body = ""
@@ -193,18 +193,19 @@ module FakeS3
       s_req = normalize_request(request)
       query = CGI::parse(request.request_uri.query)
 
-      part_number = query['partNumber'].first
-      upload_id   = query['uploadId'].first
-      part_name   = "#{upload_id}_#{s_req.object}_part#{part_number}"
+      part_number   = query['partNumber'].first
+      upload_id     = query['uploadId'].first
+      part_name     = "#{upload_id}_#{s_req.object}_part#{part_number}"
 
       # store the part
-      if s_req.type = Request::COPY
+      if s_req.type == Request::COPY
         real_obj = @store.copy_object(
           s_req.src_bucket, s_req.src_object,
           s_req.bucket    , part_name,
           request
         )
 
+        response['Content-Type'] = "text/xml"
         response.body = XmlAdapter.copy_object_result real_obj
       else
         bucket_obj  = @store.get_bucket(s_req.bucket)
