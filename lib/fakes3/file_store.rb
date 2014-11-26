@@ -165,9 +165,10 @@ module FakeS3
       match = content_type.match(/^multipart\/form-data; boundary=(.+)/)
       boundary = match[1] if match
       if boundary
-        boundary = WEBrick::HTTPUtils::dequote(boundary)
-        filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
-        raise HTTPStatus::BadRequest if filedata['file'].empty?
+        boundary  = WEBrick::HTTPUtils::dequote(boundary)
+        form_data = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
+        raise HTTPStatus::BadRequest if form_data['file'].empty?
+        filedata = form_data['file']
       else
         request.body { |chunk| filedata << chunk }
       end
