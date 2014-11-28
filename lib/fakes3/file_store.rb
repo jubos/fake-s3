@@ -167,7 +167,7 @@ module FakeS3
       if boundary
         boundary  = WEBrick::HTTPUtils::dequote(boundary)
         form_data = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
-        raise HTTPStatus::BadRequest if form_data['file'].empty?
+        raise HTTPStatus::BadRequest if form_data['file'].blank?
         filedata = form_data['file']
       else
         request.body { |chunk| filedata << chunk }
