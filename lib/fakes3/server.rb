@@ -243,12 +243,11 @@ module FakeS3
         eos
       elsif query.has_key?('uploadId')
         upload_id  = query['uploadId'].first
-
         bucket_obj = @store.get_bucket(s_req.bucket)
         real_obj   = @store.combine_object_parts(
           bucket_obj,
           upload_id,
-          request.path[1..-1],
+          s_req.object,
           parse_complete_multipart_upload(request),
           request
         )
@@ -431,6 +430,14 @@ module FakeS3
       s_req.path = webrick_req.query['key']
 
       s_req.webrick_request = webrick_req
+
+      if s_req.is_path_style
+        elems = path[1,path_len].split("/")
+        s_req.bucket = elems[0]
+        s_req.object = elems[1..-1].join('/') if elems.size >= 2
+      else
+        s_req.object = path[1..-1]
+      end
     end
 
     # This method takes a webrick request and generates a normalized FakeS3 request
