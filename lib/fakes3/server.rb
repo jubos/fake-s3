@@ -102,11 +102,12 @@ module FakeS3
           if time >= Time.iso8601(real_obj.modified_date)
             response.status = 304
             return
-          end 
+          end
         end
 
         response.status = 200
         response['Content-Type'] = real_obj.content_type
+        response['Access-Control-Allow-Origin'] = '*'
         stat = File::Stat.new(real_obj.io.path)
 
         response['Last-Modified'] = Time.iso8601(real_obj.modified_date).httpdate()
