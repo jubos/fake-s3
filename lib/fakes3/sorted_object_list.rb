@@ -80,7 +80,7 @@ module FakeS3
           if count <= max_keys
             ms.matches << s3_object
           else
-            is_truncated = true
+            ms.is_truncated = true
             break
           end
         end
