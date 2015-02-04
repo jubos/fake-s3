@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    fakes3 (0.1.6.1)
+    fakes3 (0.1.7)
       builder
       thor
 
