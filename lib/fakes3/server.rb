@@ -48,6 +48,8 @@ module FakeS3
       @hostname = hostname
       @port = server.config[:Port]
       @root_hostnames = [hostname,'localhost','s3.amazonaws.com','s3.localhost']
+      escaped_hostnames = @root_hostnames.map { |host| Regexp.escape(host) }
+      @bucket_host_regex = Regexp.new('^(.*?)\.(?:%s)$' % escaped_hostnames.join('|'))
     end
 
     def do_GET(request, response)
@@ -355,7 +357,7 @@ module FakeS3
       s_req.is_path_style = true
 
       if !@root_hostnames.include?(host)
-        s_req.bucket = host.split(".")[0]
+        s_req.bucket = @bucket_host_regex.match(host)[1]
         s_req.is_path_style = false
       end
 
