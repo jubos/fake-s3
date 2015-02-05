@@ -55,6 +55,38 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     assert_equal buf_len,output.size
   end
 
+  # Test that GET requests with a delimiter return a list of
+  def test_list_by_delimiter
+    @s3.create_bucket("s3media")
+
+    @s3.put("s3media", "delimited/item", "item")
+
+    expected_prefixes = []
+    (1..50).each do |i|
+      key_prefix = "delimited/%02d/" % i
+      @s3.put("s3media", key_prefix + "foo", "foo")
+      @s3.put("s3media", key_prefix + "fie", "fie")
+      expected_prefixes << key_prefix
+    end
+
+    key_names = []
+    common_prefixes = []
+    @s3.incrementally_list_bucket("s3media", {:prefix => "delimited", :delimiter => '/'}) do |currentResponse|
+      common_prefixes += currentResponse[:common_prefixes]
+    end
+    assert_equal ["delimited/"], common_prefixes
+
+    common_prefixes = []
+    @s3.incrementally_list_bucket("s3media", {:prefix => "delimited/", :delimiter => '/', "max-keys" => 5}) do |currentResponse|
+      key_names += currentResponse[:contents].map do |key|
+        key[:key]
+      end
+      common_prefixes += currentResponse[:common_prefixes]
+    end
+    assert_equal expected_prefixes, common_prefixes
+    assert_equal ["delimited/item"], key_names
+  end
+
   def test_multi_directory
     @s3.put("s3media","dir/right/123.txt","recursive")
     output = ""

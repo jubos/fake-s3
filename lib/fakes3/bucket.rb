@@ -57,6 +57,7 @@ module FakeS3
       bq.delimiter = delimiter
       bq.matches = match_set.matches
       bq.is_truncated = match_set.is_truncated
+      bq.common_prefixes = match_set.common_prefixes
       return bq
     end
 
