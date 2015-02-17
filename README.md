@@ -44,16 +44,24 @@ Then ensure that the following packages are installed (boto, s3cmd)
     > pip install boto
     > brew install s3cmd
 
-
-Start the test server using
-
-    rake test_server
-
-Then in another terminal window run
+Run the tests with
 
     rake test
 
-It is a still a TODO to get this to be just one command
+### In a VM
+
+Install virtualbox and vagrant, and run
+
+    vagrant up
+
+This will bootstrap a development environment in an ubuntu VM. To ssh into the
+machine:
+
+    vagrant ssh
+
+To run the tests from inside the VM:
+
+    bundle exec rake test
 
 ## More Information
 
