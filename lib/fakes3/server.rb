@@ -179,7 +179,7 @@ module FakeS3
 
     def do_POST(request,response)
       # check that we've received file data
-      unless request.content_type =~ /^multipart\/form-data; boundary=(.+)/
+      unless request.content_type =~ /^multipart\/form-data; ?boundary=(.+)/
         raise WEBrick::HTTPStatus::BadRequest
       end
       s_req = normalize_request(request)
@@ -344,6 +344,11 @@ module FakeS3
     def normalize_post(webrick_req,s_req)
       path = webrick_req.path
       path_len = path.size
+
+      if s_req.is_path_style
+        elems = path[1,path_len].split("/")
+        s_req.bucket = elems[0]
+      end
 
       s_req.path = webrick_req.query['key']
 
