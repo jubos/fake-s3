@@ -32,14 +32,14 @@ class AwsSdkV2CommandsTest < Test::Unit::TestCase
 
   def test_create_object
     object = @bucket.object('key')
-    object.put(body: 'test', content_length: 4)
+    object.put(body: 'test')
 
     assert_equal 'test', object.get.body.string
   end
 
   def test_delete_object
     object = @bucket.object('exists')
-    object.put(body: 'test', content_length: 4)
+    object.put(body: 'test')
 
     assert_equal 'test', object.get.body.string
 
@@ -52,7 +52,7 @@ class AwsSdkV2CommandsTest < Test::Unit::TestCase
 
   def test_copy_object  
     object = @bucket.object("key_one")
-    object.put(body: 'asdf', content_length: 4)
+    object.put(body: 'asdf')
 
     # TODO: explore why 'key1' won't work but 'key_one' will
     object2 = @bucket.object('key_two')
