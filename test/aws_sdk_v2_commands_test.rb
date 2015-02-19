@@ -8,6 +8,9 @@ class AwsSdkV2CommandsTest < Test::Unit::TestCase
     @s3    = Aws::S3::Client.new(credentials: @creds, region: 'us-east-1', endpoint: 'http://localhost:10453/')
     @resource = Aws::S3::Resource.new(client: @s3)
     @bucket = @resource.create_bucket(bucket: 'v2_bucket')
+
+    # Delete all objects to avoid sharing state between tests
+    @bucket.objects.each(&:delete)
   end
 
   def test_create_bucket
@@ -19,11 +22,10 @@ class AwsSdkV2CommandsTest < Test::Unit::TestCase
   end
 
   def test_destroy_bucket
-    bucket = @resource.create_bucket(bucket: 'v2_delete_bucket')
-    bucket.delete
+    @bucket.delete
 
     begin
-      @s3.head_bucket(bucket: 'v2_delete_bucket')
+      @s3.head_bucket(bucket: 'v2_bucket')
       assert_fail("Shouldn't succeed here")
     rescue
     end
@@ -49,16 +51,14 @@ class AwsSdkV2CommandsTest < Test::Unit::TestCase
     end
   end
 
-  def test_copy_object
-    bucket = @resource.create_bucket(bucket: 'testing_copy')
-
-    object = bucket.object("key_one")
+  def test_copy_object  
+    object = @bucket.object("key_one")
     object.put(body: 'asdf', content_length: 4)
 
     # TODO: explore why 'key1' won't work but 'key_one' will
-    object2 = bucket.object('key_two')
+    object2 = @bucket.object('key_two')
     object2.copy_from(copy_source: 'testing_copy/key_one')
 
-    assert_equal 2, bucket.objects.count
+    assert_equal 2, @bucket.objects.count
   end
 end
