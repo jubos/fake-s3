@@ -12,13 +12,26 @@ GEM
       builder
       mime-types
       xml-simple
+    aws-sdk (2.0.26)
+      aws-sdk-resources (= 2.0.26)
+    aws-sdk-core (2.0.26)
+      builder (~> 3.0)
+      jmespath (~> 1.0)
+      multi_json (~> 1.0)
+      multi_xml (~> 0.5)
+    aws-sdk-resources (2.0.26)
+      aws-sdk-core (= 2.0.26)
     aws-sdk-v1 (1.59.0)
       json (~> 1.4)
       nokogiri (>= 1.4.4)
     builder (3.2.2)
+    jmespath (1.0.2)
+      multi_json (~> 1.0)
     json (1.8.1)
     mime-types (1.25)
     mini_portile (0.6.1)
+    multi_json (1.10.1)
+    multi_xml (0.5.5)
     nokogiri (1.6.4.1)
       mini_portile (~> 0.6.0)
     rake (10.1.0)
@@ -35,6 +48,7 @@ PLATFORMS
 
 DEPENDENCIES
   aws-s3
+  aws-sdk (~> 2)
   aws-sdk-v1
   bundler (>= 1.0.0)
   fakes3!

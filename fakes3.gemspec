@@ -19,7 +19,9 @@ Gem::Specification.new do |s|
   s.add_development_dependency "right_aws"
   s.add_development_dependency "rest-client"
   s.add_development_dependency "rake"
+  s.add_development_dependency "aws-sdk", "~> 2"
   s.add_development_dependency "aws-sdk-v1"
+
   #s.add_development_dependency "ruby-debug"
   #s.add_development_dependency "debugger"
   s.add_dependency "thor"
