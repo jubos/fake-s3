@@ -3,7 +3,6 @@ require 'aws-sdk'
 
 class AwsSdkV2CommandsTest < Test::Unit::TestCase
   def setup
-
     @creds = Aws::Credentials.new('123', 'abc')
     @s3    = Aws::S3::Client.new(credentials: @creds, region: 'us-east-1', endpoint: 'http://localhost:10453/')
     @resource = Aws::S3::Resource.new(client: @s3)
