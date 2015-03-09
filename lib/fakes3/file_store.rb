@@ -5,7 +5,6 @@ require 'fakes3/bucket'
 require 'fakes3/rate_limitable_file'
 require 'digest/md5'
 require 'yaml'
-require 'ostruct'
 
 module FakeS3
   class FileStore
