@@ -103,7 +103,7 @@ module FakeS3
     def object_metadata(bucket,object)
     end
 
-    def copy_object(src_bucket_name,src_name,dst_bucket_name,dst_name,request)
+    def copy_object(src_bucket_name, src_name, dst_bucket_name, dst_name, request)
       src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
       src_metadata_filename = File.join(src_root,"metadata")
       src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)
@@ -140,8 +140,8 @@ module FakeS3
         end
       end
 
-      src_bucket = self.get_bucket(src_bucket_name)
-      dst_bucket = self.get_bucket(dst_bucket_name)
+      src_bucket = get_bucket(src_bucket_name) || create_bucket(src_bucket_name)
+      dst_bucket = get_bucket(dst_bucket_name) || create_bucket(dst_bucket_name)
 
       obj = S3Object.new
       obj.name = dst_name
@@ -155,7 +155,31 @@ module FakeS3
       return obj
     end
 
-    def store_object(bucket,object_name,request)
+    def store_object(bucket, object_name, request)
+      filedata = ""
+
+      # TODO put a tmpfile here first and mv it over at the end
+      content_type = request.content_type || ""
+
+      match = content_type.match(/^multipart\/form-data; boundary=(.+)/)
+      boundary = match[1] if match
+      if boundary
+        boundary  = WEBrick::HTTPUtils::dequote(boundary)
+        form_data = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
+
+        if form_data['file'] == nil or form_data['file'] == ""
+          raise WEBrick::HTTPStatus::BadRequest
+        end
+
+        filedata = form_data['file']
+      else
+        request.body { |chunk| filedata << chunk }
+      end
+
+      do_store_object(bucket, object_name, filedata, request)
+    end
+
+    def do_store_object(bucket, object_name, filedata, request)
       begin
         filename = File.join(@root,bucket.name,object_name)
         FileUtils.mkdir_p(filename)
@@ -163,29 +187,12 @@ module FakeS3
         metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
         FileUtils.mkdir_p(metadata_dir)
 
-        content = File.join(filename,SHUCK_METADATA_DIR,"content")
+        content  = File.join(filename,SHUCK_METADATA_DIR,"content")
         metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
 
-        # TODO put a tmpfile here first and mv it over at the end
+        File.open(content,'wb') { |f| f << filedata }
 
-        match=request.content_type.match(/^multipart\/form-data; boundary=(.+)/)
-      	boundary = match[1] if match
-        if boundary
-          boundary = WEBrick::HTTPUtils::dequote(boundary)
-          filedata = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
-          raise HTTPStatus::BadRequest if filedata['file'].empty?
-          File.open(content, 'wb') do |f|
-            f << filedata['file']
-          end
-        else
-          File.open(content,'wb') do |f|
-            request.body do |chunk|
-              f << chunk
-            end
-          end
-        end
         metadata_struct = create_metadata(content,request)
-
         File.open(metadata,'w') do |f|
           f << YAML::dump(metadata_struct)
         end
@@ -206,6 +213,36 @@ module FakeS3
       end
     end
 
+    def combine_object_parts(bucket, upload_id, object_name, parts, request)
+      upload_path   = File.join(@root, bucket.name)
+      base_path     = File.join(upload_path, "#{upload_id}_#{object_name}")
+
+      complete_file = ""
+      chunk         = ""
+      part_paths    = []
+
+      parts.sort_by { |part| part[:number] }.each do |part|
+        part_path    = "#{base_path}_part#{part[:number]}"
+        content_path = File.join(part_path, SHUCK_METADATA_DIR, 'content')
+
+        File.open(content_path, 'rb') { |f| chunk = f.read }
+        etag = Digest::MD5.hexdigest(chunk)
+
+        raise new Error "invalid file chunk" unless part[:etag] == etag
+        complete_file << chunk
+        part_paths    << part_path
+      end
+
+      object = do_store_object(bucket, object_name, complete_file, request)
+
+      # clean up parts
+      part_paths.each do |path|
+        FileUtils.remove_dir(path)
+      end
+
+      object
+    end
+
     def delete_object(bucket,object_name,request)
       begin
         filename = File.join(@root,bucket.name,object_name)
@@ -219,6 +256,7 @@ module FakeS3
       end
     end
 
+    # TODO: abstract getting meta data from request.
     def create_metadata(content,request)
       metadata = {}
       metadata[:md5] = Digest::MD5.file(content).hexdigest
