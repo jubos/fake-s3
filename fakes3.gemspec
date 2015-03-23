@@ -20,6 +20,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rest-client"
   s.add_development_dependency "rake"
   s.add_development_dependency "aws-sdk-v1"
+  s.add_development_dependency "mocha"
   #s.add_development_dependency "ruby-debug"
   #s.add_development_dependency "debugger"
   s.add_dependency "thor"

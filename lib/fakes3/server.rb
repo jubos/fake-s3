@@ -505,7 +505,7 @@ module FakeS3
 
 
   class Server
-    def initialize(address,port,store,hostname,ssl_cert_path,ssl_key_path)
+    def initialize(address, port, store, hostname, ssl_cert_path, ssl_key_path, quiet)
       @address = address
       @port = port
       @store = store
@@ -525,6 +525,14 @@ module FakeS3
           }
         )
       end
+
+      if quiet
+        webrick_config.merge!(
+          :Logger => WEBrick::Log.new("/dev/null"),
+          :AccessLog => []
+        )
+      end
+
       @server = WEBrick::HTTPServer.new(webrick_config)
     end
 

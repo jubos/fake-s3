@@ -16,17 +16,15 @@ GEM
       json (~> 1.4)
       nokogiri (>= 1.4.4)
     builder (3.2.2)
-    byebug (4.0.1)
-      columnize (= 0.9.0)
-      rb-readline (= 0.5.2)
-    columnize (0.9.0)
     json (1.8.1)
+    metaclass (0.0.4)
     mime-types (1.25)
     mini_portile (0.6.1)
+    mocha (1.1.0)
+      metaclass (~> 0.0.1)
     nokogiri (1.6.4.1)
       mini_portile (~> 0.6.0)
     rake (10.1.0)
-    rb-readline (0.5.2)
     rest-client (1.6.7)
       mime-types (>= 1.16)
     right_aws (3.1.0)
@@ -42,8 +40,8 @@ DEPENDENCIES
   aws-s3
   aws-sdk-v1
   bundler (>= 1.0.0)
-  byebug
   fakes3!
+  mocha
   rake
   rest-client
   right_aws
