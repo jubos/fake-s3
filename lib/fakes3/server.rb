@@ -477,6 +477,11 @@ module FakeS3
       return s_req
     end
 
+    def gral_strip(string, chars)
+      chars = Regexp.escape(chars)
+      string.gsub(/\A[#{chars}]+|[#{chars}]+\z/, "")
+    end
+
     def parse_complete_multipart_upload request
       parts_xml   = ""
       request.body { |chunk| parts_xml << chunk }
@@ -487,7 +492,7 @@ module FakeS3
       parts_xml.collect do |xml|
         {
           number: xml[/\<PartNumber\>(\d+)\<\/PartNumber\>/, 1].to_i,
-          etag:   xml[/\<ETag\>\"(.+)\"\<\/ETag\>/, 1]
+          etag:   gral_strip(xml[/\<ETag\>(.+)\<\/ETag\>/, 1], "\"")
         }
       end
     end
