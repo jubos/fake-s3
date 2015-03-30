@@ -488,12 +488,12 @@ module FakeS3
       request.body { |chunk| parts_xml << chunk }
 
       # TODO: I suck at parsing xml
-      parts_xml = parts_xml.scan /\<Part\>.*?<\/Part\>/m
+      parts_xml = parts_xml.scan /<Part>.*?<\/Part>/m
 
       parts_xml.collect do |xml|
         {
-          number: xml[/\<PartNumber\>(\d+)\<\/PartNumber\>/, 1].to_i,
-          etag:   strip(xml[/\<ETag\>(.+)\<\/ETag\>/, 1], "\"") # Strip quotation marks if present
+          number: xml[/<PartNumber>(\d+)<\/PartNumber>/, 1].to_i,
+          etag:   strip(xml[/<ETag>(.+)<\/ETag>/, 1], "\"") # Strip quotation marks if present
         }
       end
     end
