@@ -1,5 +1,6 @@
 require 'builder'
 require 'time'
+require 'ostruct'
 
 module FakeS3
   class XmlAdapter
@@ -46,29 +47,19 @@ module FakeS3
     #</Error>
     #
     def self.error_no_such_bucket(name)
-      output = ""
-      xml = Builder::XmlMarkup.new(:target => output)
-      xml.instruct! :xml, :version=>"1.0", :encoding=>"UTF-8"
-      xml.Error { |err|
-        err.Code("NoSuchBucket")
-        err.Message("The resource you requested does not exist")
-        err.Resource(name)
-        err.RequestId(1)
-      }
-      output
+      self.error(
+        make_error("NoSuchBucket",
+                   "The resource you requested does not exist",
+                   name)
+      )
     end
 
     def self.error_bucket_not_empty(name)
-      output = ""
-      xml = Builder::XmlMarkup.new(:target => output)
-      xml.instruct! :xml, :version=>"1.0", :encoding=>"UTF-8"
-      xml.Error { |err|
-        err.Code("BucketNotEmpty")
-        err.Message("The bucket you tried to delete is not empty.")
-        err.Resource(name)
-        err.RequestId(1)
-      }
-      output
+      self.error(
+        make_error("BucketNotEmpty",
+                   "The bucket you tried to delete is not empty.",
+                   name)
+      )
     end
 
     def self.error_no_such_key(name)
@@ -217,6 +208,10 @@ module FakeS3
         result.ETag("\"#{object.md5}\"")
       }
       output
+    end
+
+    def self.make_error(error, message, name)
+      OpenStruct.new(error: error, message: message, name: name)
     end
   end
 end
