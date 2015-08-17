@@ -517,7 +517,8 @@ module FakeS3
       @log = log
       webrick_config = {
         :BindAddress => @address,
-        :Port => @port
+        :Port => @port,
+        :DoNotReverseLookup => true
       }
       webrick_config[:Logger] = WEBrick::Log.new(@log) if @daemonize
       if !@ssl_cert_path.to_s.empty?
