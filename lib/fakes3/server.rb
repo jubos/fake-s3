@@ -1,6 +1,7 @@
 require 'time'
 require 'webrick'
 require 'webrick/https'
+require 'webrick/log'
 require 'openssl'
 require 'securerandom'
 require 'cgi'
@@ -116,6 +117,11 @@ module FakeS3
 
         response.status = 200
         response['Content-Type'] = real_obj.content_type
+
+        if !real_obj.content_encoding.nil?
+          response['Content-Encoding'] = real_obj.content_encoding
+        end
+
         stat = File::Stat.new(real_obj.io.path)
 
         response['Last-Modified'] = Time.iso8601(real_obj.modified_date).httpdate()
@@ -505,17 +511,21 @@ module FakeS3
 
 
   class Server
-    def initialize(address,port,store,hostname,ssl_cert_path,ssl_key_path)
+    def initialize(address,port,store,hostname,ssl_cert_path,ssl_key_path,daemonize=false,log=nil)
       @address = address
       @port = port
       @store = store
       @hostname = hostname
       @ssl_cert_path = ssl_cert_path
       @ssl_key_path = ssl_key_path
+      @daemonize = daemonize
+      @log = log
       webrick_config = {
         :BindAddress => @address,
-        :Port => @port
+        :Port => @port,
+        :DoNotReverseLookup => true
       }
+      webrick_config[:Logger] = WEBrick::Log.new(@log) if @daemonize
       if !@ssl_cert_path.to_s.empty?
         webrick_config.merge!(
           {
@@ -525,12 +535,17 @@ module FakeS3
           }
         )
       end
+      WEBrick::Daemon.start if @daemonize
       @server = WEBrick::HTTPServer.new(webrick_config)
     end
 
     def serve
       @server.mount "/", Servlet, @store,@hostname
-      trap "INT" do @server.shutdown end
+
+      shutdown = proc { @server.shutdown }
+      trap "INT", &shutdown
+      trap "TERM", &shutdown
+
       @server.start
     end
 
