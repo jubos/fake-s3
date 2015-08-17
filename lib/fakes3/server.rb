@@ -1,7 +1,7 @@
 require 'time'
 require 'webrick'
 require 'webrick/https'
-reqiure 'webrick/log'
+require 'webrick/log'
 require 'openssl'
 require 'securerandom'
 require 'cgi'
