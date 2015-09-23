@@ -5,6 +5,8 @@ require 'fakes3/bucket'
 require 'fakes3/rate_limitable_file'
 require 'digest/md5'
 require 'yaml'
+require 'rexml/document'
+include REXML
 
 module FakeS3
   class FileStore
@@ -228,7 +230,7 @@ module FakeS3
         File.open(content_path, 'rb') { |f| chunk = f.read }
         etag = Digest::MD5.hexdigest(chunk)
 
-        raise new Error "invalid file chunk" unless part[:etag] == etag
+      raise new Error "invalid file chunk" unless part[:etag] == etag
         complete_file << chunk
         part_paths    << part_path
       end
@@ -249,6 +251,19 @@ module FakeS3
         FileUtils.rm_rf(filename)
         object = bucket.find(object_name)
         bucket.remove(object)
+      rescue
+        puts $!
+        $!.backtrace.each { |line| puts line }
+        return nil
+      end
+    end
+
+    def delete_objects(bucket,request)
+      begin
+        xmldoc = Document.new(request.body)
+        xmldoc.elements.each("Delete/Object/Key") do |key|
+          delete_object(bucket, key.text, request)
+        end
       rescue
         puts $!
         $!.backtrace.each { |line| puts line }
