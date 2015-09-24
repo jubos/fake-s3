@@ -10,6 +10,21 @@ class AwsSdkCommandsTest < Test::Unit::TestCase
                       :use_ssl => false)
   end
 
+  def test_list_objects
+    #assemble
+    bucket = @s3.buckets["test_list_objects"]
+    object = bucket.objects["key1"]
+    object.write("asdf")
+    object.copy_to("prefix1/sub1/key2")
+    object.copy_to("prefix1/sub2/key3")
+ 
+    #act & assert
+    assert_equal 3, bucket.objects.count
+    assert_equal 2, bucket.objects.with_prefix('prefix1/').count
+    assert_equal 1, bucket.objects.with_prefix('prefix1/sub2/').count
+    assert (not bucket.objects.with_prefix('prefix1/').collect(&:key).include? 'key1')
+  end
+
   def test_copy_to
     bucket = @s3.buckets["test_copy_to"]
     object = bucket.objects["key1"]

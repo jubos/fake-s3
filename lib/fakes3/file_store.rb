@@ -26,6 +26,19 @@ module FakeS3
         bucket_obj = Bucket.new(bucket_name,Time.now,[])
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
+
+        #pre-load objects into bucket, so ListObjects calls work.
+        Dir[File.join(bucket,'/**/.fakes3_metadataFFF')].each do |fullpath|
+          key = fullpath.sub('/.fakes3_metadataFFF', '').sub(bucket + '/', '')
+          object = get_object(bucket_name, key, 'norequest')
+          bucket_obj.add(object)
+        end
+      end
+
+      puts "=================================================="
+      puts "Buckets initialized with contents:"
+      buckets.each do |b|
+        puts "#{b.name} - #{b.objects.count} items"
       end
     end
 
