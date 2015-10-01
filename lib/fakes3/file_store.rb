@@ -32,6 +32,7 @@ module FakeS3
           key = fullpath.sub('/.fakes3_metadataFFF', '').sub(bucket + '/', '')
           object = get_object(bucket_name, key, 'norequest')
           bucket_obj.add(object)
+          object.io.close
         end
       end
 
