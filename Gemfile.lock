@@ -21,6 +21,8 @@ GEM
     mini_portile (0.6.1)
     nokogiri (1.6.4.1)
       mini_portile (~> 0.6.0)
+    nokogiri (1.6.4.1-x64-mingw32)
+      mini_portile (~> 0.6.0)
     rake (10.1.0)
     rest-client (1.6.7)
       mime-types (>= 1.16)
@@ -32,6 +34,7 @@ GEM
 
 PLATFORMS
   ruby
+  x64-mingw32
 
 DEPENDENCIES
   aws-s3
