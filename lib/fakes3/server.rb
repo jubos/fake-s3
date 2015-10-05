@@ -14,6 +14,7 @@ module FakeS3
   class Request
     CREATE_BUCKET = "CREATE_BUCKET"
     LIST_BUCKETS = "LIST_BUCKETS"
+    LIST_PARTS = "LIST_PARTS"
     LS_BUCKET = "LS_BUCKET"
     HEAD = "HEAD"
     STORE = "STORE"
@@ -89,6 +90,16 @@ module FakeS3
       when 'GET_ACL'
         response.status = 200
         response.body = XmlAdapter.acl()
+        response['Content-Type'] = 'application/xml'
+      when 'LIST_PARTS'
+        upload_id = s_req.query['uploadId']
+        response.status = 200
+        response.body = XmlAdapter.list_parts_result(
+          s_req.bucket,
+          s_req.object,
+          upload_id,
+          @store.list_object_parts(s_req.bucket, s_req.object, upload_id)
+        )
         response['Content-Type'] = 'application/xml'
       when 'GET'
         real_obj = @store.get_object(s_req.bucket,s_req.object,request)
@@ -245,17 +256,14 @@ module FakeS3
           </InitiateMultipartUploadResult>
         eos
       elsif query.has_key?('uploadId')
-        upload_id  = query['uploadId'].first
-        bucket_obj = @store.get_bucket(s_req.bucket)
-        real_obj   = @store.combine_object_parts(
-          bucket_obj,
-          upload_id,
+        combined_obj = @store.combine_object_parts(
+          s_req.bucket,
           s_req.object,
-          parse_complete_multipart_upload(request),
-          request
+          query['uploadId'].first,
+          parse_complete_multipart_upload(s_req.webrick_request),
+          s_req.webrick_request
         )
-
-        response.body = XmlAdapter.complete_multipart_result real_obj
+        response.body = XmlAdapter.complete_multipart_result combined_obj
       elsif request.content_type =~ /^multipart\/form-data; boundary=(.+)/
         key=request.query['key']
 
@@ -372,6 +380,9 @@ module FakeS3
         else
           if query["acl"] == ""
             s_req.type = Request::GET_ACL
+          elsif query.has_key?('uploadId')
+            s_req.type = Request::LIST_PARTS
+            s_req.query = query
           else
             s_req.type = Request::GET
           end
@@ -422,8 +433,6 @@ module FakeS3
         s_req.src_object = src_elems[1 + root_offset,src_elems.size].join("/")
         s_req.type = Request::COPY
       end
-
-      s_req.webrick_request = webrick_req
     end
 
     def normalize_post(webrick_req,s_req)
@@ -431,8 +440,6 @@ module FakeS3
       path_len = path.size
 
       s_req.path = webrick_req.query['key']
-
-      s_req.webrick_request = webrick_req
 
       if s_req.is_path_style
         elems = path[1,path_len].split("/")
@@ -449,6 +456,7 @@ module FakeS3
       host = host_header.split(':')[0]
 
       s_req = Request.new
+      s_req.webrick_request = webrick_req
       s_req.path = webrick_req.path
       s_req.is_path_style = true
 
