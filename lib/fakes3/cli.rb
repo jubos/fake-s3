@@ -41,6 +41,7 @@ module FakeS3
           hostnames << h
         end
       end
+      hostnames.uniq!
 
       if options[:limit]
         begin
