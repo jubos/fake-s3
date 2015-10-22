@@ -5,6 +5,8 @@ require 'fakes3/bucket'
 require 'fakes3/rate_limitable_file'
 require 'digest/md5'
 require 'yaml'
+require 'rexml/document'
+include REXML
 
 module FakeS3
   class FileStore
@@ -24,6 +26,20 @@ module FakeS3
         bucket_obj = Bucket.new(bucket_name,Time.now,[])
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
+
+        #pre-load objects into bucket, so ListObjects calls work.
+        Dir[File.join(bucket,'/**/.fakes3_metadataFFF')].each do |fullpath|
+          key = fullpath.sub('/.fakes3_metadataFFF', '').sub(bucket + '/', '')
+          object = get_object(bucket_name, key, 'norequest')
+          bucket_obj.add(object)
+          object.io.close
+        end
+      end
+
+      puts "=================================================="
+      puts "Buckets initialized with contents:"
+      buckets.each do |b|
+        puts "#{b.name} - #{b.objects.count} items"
       end
     end
 
@@ -228,7 +244,7 @@ module FakeS3
         File.open(content_path, 'rb') { |f| chunk = f.read }
         etag = Digest::MD5.hexdigest(chunk)
 
-        raise new Error "invalid file chunk" unless part[:etag] == etag
+      raise new Error "invalid file chunk" unless part[:etag] == etag
         complete_file << chunk
         part_paths    << part_path
       end
@@ -249,6 +265,19 @@ module FakeS3
         FileUtils.rm_rf(filename)
         object = bucket.find(object_name)
         bucket.remove(object)
+      rescue
+        puts $!
+        $!.backtrace.each { |line| puts line }
+        return nil
+      end
+    end
+
+    def delete_objects(bucket,request)
+      begin
+        xmldoc = Document.new(request.body)
+        xmldoc.elements.each("Delete/Object/Key") do |key|
+          delete_object(bucket, key.text, request)
+        end
       rescue
         puts $!
         $!.backtrace.each { |line| puts line }

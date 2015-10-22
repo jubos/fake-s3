@@ -6,3 +6,5 @@ test_root
 
 # Don't check in RVM/rbenv files
 .ruby-version
+
+fakes3.sublime-workspace

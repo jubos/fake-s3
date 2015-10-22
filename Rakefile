@@ -6,7 +6,7 @@ Bundler::GemHelper.install_tasks
 
 Rake::TestTask.new(:test) do |t|
   t.libs << "."
-  t.test_files =
+  t.test_files = 
     FileList['test/*_test.rb'].exclude('test/s3_commands_test.rb')
 end
 

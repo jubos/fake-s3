@@ -22,8 +22,9 @@ module FakeS3
     GET_ACL = "GET_ACL"
     SET_ACL = "SET_ACL"
     MOVE = "MOVE"
-    DELETE_OBJECT = "DELETE_OBJECT"
     DELETE_BUCKET = "DELETE_BUCKET"
+    DELETE_OBJECT = "DELETE_OBJECT"
+    DELETE_OBJECTS = "DELETE_OBJECTS"
 
     attr_accessor :bucket,:object,:type,:src_bucket,
                   :src_object,:method,:webrick_request,
@@ -73,12 +74,7 @@ module FakeS3
         if bucket_obj
           response.status = 200
           response['Content-Type'] = "application/xml"
-          query = {
-            :marker => s_req.query["marker"] ? s_req.query["marker"].to_s : nil,
-            :prefix => s_req.query["prefix"] ? s_req.query["prefix"].to_s : nil,
-            :max_keys => s_req.query["max_keys"] ? s_req.query["max_keys"].to_s : nil,
-            :delimiter => s_req.query["delimiter"] ? s_req.query["delimiter"].to_s : nil
-          }
+          query = get_options(s_req)
           bq = bucket_obj.query_for_range(query)
           response.body = XmlAdapter.bucket_query(bq)
         else
@@ -229,6 +225,10 @@ module FakeS3
     end
 
     def do_POST(request,response)
+      if request.query_string =~ /delete/i
+        return do_DELETE(request, response)
+      end
+
       s_req = normalize_request(request)
       key   = request.query['key']
       query = CGI::parse(request.request_uri.query || "")
@@ -301,17 +301,25 @@ module FakeS3
 
     def do_DELETE(request,response)
       s_req = normalize_request(request)
-
+	  response.status = 204
+      response.body = ""
+	  
       case s_req.type
       when Request::DELETE_OBJECT
         bucket_obj = @store.get_bucket(s_req.bucket)
         @store.delete_object(bucket_obj,s_req.object,s_req.webrick_request)
       when Request::DELETE_BUCKET
         @store.delete_bucket(s_req.bucket)
+      when Request::DELETE_OBJECTS
+        bucket_obj = @store.get_bucket(s_req.bucket)
+        @store.delete_objects(bucket_obj,s_req.webrick_request)
+		response.status = 200
+		response.body = <<-eos.strip
+              <?xml version="1.0" encoding="UTF-8"?>
+              <DeleteResponse>
+              </DeleteResponse>
+            eos
       end
-
-      response.status = 204
-      response.body = ""
     end
 
     def do_OPTIONS(request, response)
@@ -441,6 +449,10 @@ module FakeS3
       else
         s_req.object = path[1..-1]
       end
+
+      if webrick_req.query_string =~ /delete/i
+        s_req.type = Request::DELETE_OBJECTS
+      end
     end
 
     # This method takes a webrick request and generates a normalized FakeS3 request
@@ -477,6 +489,11 @@ module FakeS3
       return s_req
     end
 
+	def gral_strip(string, chars)
+      chars = Regexp.escape(chars)
+      string.gsub(/\A[#{chars}]+|[#{chars}]+\z/, "")
+    end
+
     def parse_complete_multipart_upload request
       parts_xml   = ""
       request.body { |chunk| parts_xml << chunk }
@@ -487,7 +504,7 @@ module FakeS3
       parts_xml.collect do |xml|
         {
           number: xml[/\<PartNumber\>(\d+)\<\/PartNumber\>/, 1].to_i,
-          etag:   xml[/\<ETag\>\"(.+)\"\<\/ETag\>/, 1]
+          etag:   gral_strip(xml[/\<ETag\>(.+)\<\/ETag\>/, 1], "\"")
         }
       end
     end
@@ -500,6 +517,15 @@ module FakeS3
         puts "#{k}:#{v}"
       end
       puts "----------End Dump -------------"
+    end
+
+    def get_options(s_req)
+      return {
+            :marker => s_req.query["marker"] ? s_req.query["marker"].to_s : nil,
+            :prefix => s_req.query["prefix"] ? s_req.query["prefix"].to_s : nil,
+            :max_keys => s_req.query["max_keys"] ? s_req.query["max_keys"].to_s : nil,
+            :delimiter => s_req.query["delimiter"] ? s_req.query["delimiter"].to_s : nil
+          }
     end
   end
 
