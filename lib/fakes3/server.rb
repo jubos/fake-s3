@@ -301,7 +301,9 @@ module FakeS3
 
     def do_DELETE(request,response)
       s_req = normalize_request(request)
-
+	  response.status = 204
+      response.body = ""
+	  
       case s_req.type
       when Request::DELETE_OBJECT
         bucket_obj = @store.get_bucket(s_req.bucket)
@@ -311,10 +313,13 @@ module FakeS3
       when Request::DELETE_OBJECTS
         bucket_obj = @store.get_bucket(s_req.bucket)
         @store.delete_objects(bucket_obj,s_req.webrick_request)
+		response.status = 200
+		response.body = <<-eos.strip
+              <?xml version="1.0" encoding="UTF-8"?>
+              <DeleteResponse>
+              </DeleteResponse>
+            eos
       end
-
-      response.status = 204
-      response.body = ""
     end
 
     def do_OPTIONS(request, response)
@@ -484,6 +489,11 @@ module FakeS3
       return s_req
     end
 
+	def gral_strip(string, chars)
+      chars = Regexp.escape(chars)
+      string.gsub(/\A[#{chars}]+|[#{chars}]+\z/, "")
+    end
+
     def parse_complete_multipart_upload request
       parts_xml   = ""
       request.body { |chunk| parts_xml << chunk }
@@ -494,7 +504,7 @@ module FakeS3
       parts_xml.collect do |xml|
         {
           number: xml[/\<PartNumber\>(\d+)\<\/PartNumber\>/, 1].to_i,
-          etag:   xml[/\<ETag\>\"(.+)\"\<\/ETag\>/, 1]
+          etag:   gral_strip(xml[/\<ETag\>(.+)\<\/ETag\>/, 1], "\"")
         }
       end
     end

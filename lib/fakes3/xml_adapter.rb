@@ -218,5 +218,20 @@ module FakeS3
       }
       output
     end
+	
+	# <DeleteObjectsResult>
+    #   <LastModified>2009-10-28T22:32:00</LastModified>
+    #   <ETag>"9b2cf535f27731c974343645a3985328"</ETag>
+    # </CopyObjectResult>
+    def self.delete_objects_result(object)
+      output = ""
+      xml = Builder::XmlMarkup.new(:target => output)
+      xml.instruct! :xml, :version=>"1.0", :encoding=>"UTF-8"
+      xml.DeleteResult(:xmlns => "http://s3.amazonaws.com/doc/2006-03-01/") { |result|
+
+      }
+      output
+    end
+	
   end
 end
