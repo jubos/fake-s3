@@ -445,6 +445,10 @@ module FakeS3
 
     # This method takes a webrick request and generates a normalized FakeS3 request
     def normalize_request(webrick_req)
+      if (@store.use_cache)
+        @store.rebuild()
+      end
+      
       host_header= webrick_req["Host"]
       host = host_header.split(':')[0]
 

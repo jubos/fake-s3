@@ -15,11 +15,16 @@ module FakeS3
     # sub second precision.
     SUBSECOND_PRECISION = 3
 
-    def initialize(root)
+    def initialize(root, cachedstore)
       @root = root
+      @use_cache = cachedstore
+      rebuild()
+    end
+
+    def rebuild()
       @buckets = []
       @bucket_hash = {}
-      Dir[File.join(root,"*")].each do |bucket|
+      Dir[File.join(@root,"*")].each do |bucket|
         bucket_name = File.basename(bucket)
         bucket_obj = Bucket.new(bucket_name,Time.now,[])
         @buckets << bucket_obj
@@ -44,6 +49,10 @@ module FakeS3
       else
         RateLimitableFile.rate_limit = nil
       end
+    end
+
+    def use_cache
+      @use_cache
     end
 
     def buckets
