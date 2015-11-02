@@ -53,10 +53,12 @@ module FakeS3
         abort "If you specify an SSL certificate you must also specify an SSL certificate key"
       end
 
+      puts "Loading Swirl FakeS3 (ver. #{FakeS3::VERSION}) with #{root} on port #{options[:port]} with hostname #{hostname}"
+
       if (!options[:cachedstore])
         puts "Store cache is disabled. This option makes Fake S3 slow but allows for file-system manipulation"
       end
-      puts "Loading FakeS3 with #{root} on port #{options[:port]} with hostname #{hostname}"
+
       server = FakeS3::Server.new(address,options[:port],store,hostname,ssl_cert_path,ssl_key_path)
       server.serve
     end
@@ -65,9 +67,10 @@ module FakeS3
     def version
       puts <<"EOF"
 ======================
-FakeS3 #{FakeS3::VERSION}
+Swirl FakeS3 #{FakeS3::VERSION}
 
-Copyright 2012, Curtis Spencer (@jubos)
+Swirl Networks, Inc
+www.github.com/SwirlNetworks/fake-s3
 EOF
     end
   end
