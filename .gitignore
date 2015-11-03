@@ -3,6 +3,7 @@ pkg/*
 .bundle
 tmp
 test_root
+.idea
 
 # Don't check in RVM/rbenv files
 .ruby-version
