@@ -11,9 +11,13 @@ Ceph might be a place to start if that is your goal.
 FakeS3 doesn't support all of the S3 command set, but the basic ones like put, get,
 list, copy, and make bucket are supported.  More coming soon.
 
+As of version 0.2.4 Fake S3 has a setting called '--cachedstore' that will cause it to
+read contents of the underlying file system from disk on every request. This is very
+helpful in cases where automation tasks need to reset the state of Fake S3 between runs.
+
 ## Installation
 
-    gem install fakes3
+    gem install swirl-fakes3
 
 ## Running
 
@@ -26,8 +30,6 @@ To run a fakes3 server, you just specify a root and a port.
 Take a look at the test cases to see client example usage.  For now, FakeS3 is
 mainly tested with s3cmd, aws-s3 gem, and right_aws.  There are plenty more
 libraries out there, and please do mention if other clients work or not.
-
-Here is a running list of [supported clients](https://github.com/jubos/fake-s3/wiki/Supported-Clients "Supported Clients")
 
 ## Running Tests
 
@@ -54,7 +56,3 @@ Then in another terminal window run
     rake test
 
 It is a still a TODO to get this to be just one command
-
-## More Information
-
-Check out the [wiki](https://github.com/jubos/fake-s3/wiki)
