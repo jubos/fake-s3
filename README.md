@@ -1,4 +1,6 @@
 ## Introduction
+
+[![Join the chat at https://gitter.im/jubos/fake-s3](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jubos/fake-s3?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 FakeS3 is a lightweight server that responds to the same calls Amazon S3 responds to.
 It is extremely useful for testing of S3 in a sandbox environment without actually
 making calls to Amazon, which not only require network, but also cost you precious dollars.
