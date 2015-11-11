@@ -58,3 +58,5 @@ It is a still a TODO to get this to be just one command
 ## More Information
 
 Check out the [wiki](https://github.com/jubos/fake-s3/wiki)
+
+[![Join the chat at https://gitter.im/jubos/fake-s3](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jubos/fake-s3?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
