@@ -228,7 +228,10 @@ module FakeS3
         File.open(content_path, 'rb') { |f| chunk = f.read }
         etag = Digest::MD5.hexdigest(chunk)
 
-        raise new Error "invalid file chunk" unless part[:etag] == etag
+        if part[:etag] && part[:etag].to_s != etag.to_s
+          raise "invalid file chunk #{part[:number]}: etag: #{part[:etag]} expected: #{etag}, #{part[:etag] == etag}"
+        end
+
         complete_file << chunk
         part_paths    << part_path
       end
