@@ -8,11 +8,8 @@ Rake::TestTask.new(:test) do |t|
   t.libs << "."
   t.test_files =
     FileList['test/*_test.rb'].exclude('test/s3_commands_test.rb')
-end
-
-desc "Run the test_server"
-task :test_server do |t|
-  system("bundle exec bin/fakes3 --port 10453 --root test_root")
+  test_server = spawn('bundle exec bin/fakes3 --port 10453 --root test_root', :err => '/dev/null')
+  Signal.trap('EXIT') { Process.kill('SIGINT', test_server) }
 end
 
 task :default => :test

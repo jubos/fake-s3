@@ -25,6 +25,7 @@ GEM
     mini_portile (0.6.1)
     nokogiri (1.6.4.1)
       mini_portile (~> 0.6.0)
+    power_assert (0.2.2)
     rake (10.1.0)
     rb-readline (0.5.2)
     rest-client (1.6.7)
@@ -32,6 +33,8 @@ GEM
     right_aws (3.1.0)
       right_http_connection (>= 1.2.5)
     right_http_connection (1.4.0)
+    test-unit (3.0.9)
+      power_assert
     thor (0.18.1)
     xml-simple (1.1.2)
 
@@ -47,3 +50,4 @@ DEPENDENCIES
   rake
   rest-client
   right_aws
+  test-unit
