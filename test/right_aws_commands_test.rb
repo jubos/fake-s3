@@ -9,7 +9,7 @@ class RightAWSCommandsTest < Test::Unit::TestCase
   def setup
     @s3 = RightAws::S3Interface.new('1E3GDYEOGFJPIT7XXXXXX','hgTHt68JY07JKUY08ftHYtERkjgtfERn57XXXXXX',
                                     {:multi_thread => false, :server => 'localhost',
-                                      :port => 10453, :protocol => 'http',:logger => Logger.new("/dev/null"),:no_subdomains => true })
+                                      :port => 10453, :protocol => 'http',:logger => Logger.new("/dev/null"), :no_subdomains => true })
   end
 
   def teardown
@@ -108,6 +108,20 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     @s3.copy("s3media","foo","s3media","foo")
     obj = @s3.get("s3media","foo")
     assert_equal "Hello World",obj[:object]
+  end
+
+  def test_content_encoding
+    foo_compressed = Zlib::Deflate.deflate("foo")
+    result = @s3.put("s3media", "foo", foo_compressed, {"content-encoding"=>"gzip"})
+    obj = @s3.get("s3media", "foo")
+    assert_equal "gzip", obj[:headers]["content-encoding"]
+  end
+  
+  def test_content_encoding_data
+    foo_compressed = Zlib::Deflate.deflate("foo-two")
+    result = @s3.put("s3media", "foo-two", foo_compressed, {"content-encoding"=>"gzip"})
+    obj = @s3.get("s3media", "foo-two")
+    assert_equal "foo-two", Zlib::Inflate::inflate(obj[:object])
   end
 
   def test_copy_replace_metadata
