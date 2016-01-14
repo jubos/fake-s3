@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    fakes3 (0.2.2)
+    fakes3 (0.2.3)
       builder
       thor
 
@@ -41,3 +41,6 @@ DEPENDENCIES
   rake
   rest-client
   right_aws
+
+BUNDLED WITH
+   1.11.2

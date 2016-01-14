@@ -9,7 +9,7 @@ class RightAWSCommandsTest < Test::Unit::TestCase
   def setup
     @s3 = RightAws::S3Interface.new('1E3GDYEOGFJPIT7XXXXXX','hgTHt68JY07JKUY08ftHYtERkjgtfERn57XXXXXX',
                                     {:multi_thread => false, :server => 'localhost',
-                                      :port => 10453, :protocol => 'http',:logger => Logger.new("/dev/null"),:no_subdomains => true })
+                                      :port => 10453, :protocol => 'http',:logger => Logger.new("/dev/null"), :no_subdomains => true })
   end
 
   def teardown
@@ -112,8 +112,9 @@ class RightAWSCommandsTest < Test::Unit::TestCase
 
   def test_content_encoding
     foo_compressed = Zlib::Deflate.deflate("foo")
-    @s3.put("s3media", foo_compressed, {:content_encoding=>"gzip"})
-    obj = @s3.get("s3media")
+    puts "foo_compressed: #{foo_compressed}"
+    @s3.put("s3media", "foo", foo_compressed, {:content_encoding=>"gzip"})
+    obj = @s3.get("s3media", "foo")
     assert_equal "gzip", obj[:headers]["content-encoding"]
   end
 
