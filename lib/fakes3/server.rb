@@ -9,6 +9,7 @@ require 'fakes3/xml_adapter'
 require 'fakes3/bucket_query'
 require 'fakes3/unsupported_operation'
 require 'fakes3/errors'
+require 'ipaddr'
 
 module FakeS3
   class Request
@@ -457,7 +458,7 @@ module FakeS3
       s_req.path = webrick_req.path
       s_req.is_path_style = true
 
-      if !@root_hostnames.include?(host)
+      if !@root_hostnames.include?(host) && !(IPAddr.new(host) rescue nil)
         s_req.bucket = host.split(".")[0]
         s_req.is_path_style = false
       end
