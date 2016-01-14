@@ -84,6 +84,7 @@ module FakeS3
         real_obj.name = object_name
         real_obj.md5 = metadata[:md5]
         real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
+
         real_obj.content_encoding = metadata.fetch(:content_encoding)
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
         real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
@@ -206,7 +207,7 @@ module FakeS3
         obj.content_encoding = metadata_struct[:content_encoding]
         obj.size = metadata_struct[:size]
         obj.modified_date = metadata_struct[:modified_date]
-
+        
         bucket.add(obj)
         return obj
       rescue
