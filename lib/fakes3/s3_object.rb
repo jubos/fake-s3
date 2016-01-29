@@ -8,12 +8,12 @@ module FakeS3
     end
 
     def eql?(object)
-      @name == object.name
+      object.is_a?(self.class) ? (@name == object.name) : false
     end
 
     # Sort by the object's name
     def <=>(object)
-      @name <=> object.name
+      object.is_a?(self.class) ? (@name <=> object.name) : nil
     end
   end
 end
