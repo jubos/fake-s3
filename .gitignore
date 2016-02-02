@@ -9,3 +9,6 @@ test_root
 
 # RubyMine
 .idea
+
+# Don't check in the Gemfile.lock
+Gemfile.lock
