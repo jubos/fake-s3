@@ -5,6 +5,7 @@ require 'fakes3/bucket'
 require 'fakes3/rate_limitable_file'
 require 'digest/md5'
 require 'yaml'
+require 'uri'
 
 module FakeS3
   class FileStore
@@ -104,6 +105,9 @@ module FakeS3
     end
 
     def copy_object(src_bucket_name, src_name, dst_bucket_name, dst_name, request)
+      src_name = URI.unescape(src_name)
+      dst_name = URI.unescape(dst_name)
+
       src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
       src_metadata_filename = File.join(src_root,"metadata")
       src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)
