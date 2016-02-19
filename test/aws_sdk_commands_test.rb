@@ -1,5 +1,6 @@
 require 'test/test_helper'
 require 'aws-sdk-v1'
+require 'rest-client'
 
 class AwsSdkCommandsTest < Test::Unit::TestCase
   def setup
@@ -54,5 +55,44 @@ class AwsSdkCommandsTest < Test::Unit::TestCase
     assert metadata_file.has_key?(:amazon_metadata), 'Metadata file does not contain an :amazon_metadata key'
     assert metadata_file[:amazon_metadata].has_key?('storage-class'), ':amazon_metadata does not contain field "storage-class"'
     assert_equal 'REDUCED_REDUNDANCY', metadata_file[:amazon_metadata]['storage-class'], '"storage-class" does not equal expected value "REDUCED_REDUNDANCY"'
+  end
+
+  def test_content_disposition
+    bucket = @s3.buckets["test_bucket"]
+    bucket.objects.create("test_object", "asdf", :content_disposition => "application/test")
+    assert_equal "application/test", content_disposition("test_bucket", "test_object")
+  end
+
+  def test_content_disposition_copy
+    bucket = @s3.buckets["test_bucket"]
+    object = bucket.objects.create("test_object", "asdf", :content_disposition => "application/test")
+    object.copy_to("test_copy_object")
+    assert_equal "application/test", content_disposition("test_bucket", "test_copy_object")
+  end
+
+  def test_content_disposition_request_parameter
+    bucket = @s3.buckets["test_bucket"]
+    object = bucket.objects.create("test_object", "asdf")
+    url = object.url_for(:read, :response_content_disposition => "application/test", :signature_version => :v4)
+    assert_equal "application/test", response_header(url, :content_disposition)
+  end
+
+  def test_content_type_request_parameter
+    bucket = @s3.buckets["test_bucket"]
+    object = bucket.objects.create("test_object", "asdf")
+    url = object.url_for(:read, :response_content_type => "application/test", :signature_version => :v4)
+    assert_equal "application/test", response_header(url, :content_type)
+  end
+
+  # Unfortunately v1 of the AWS SDK doesn't support reading the content_disposition of an object
+  def content_disposition(bucket_name, key)
+    url = "http://localhost:#{@s3.client.port}/#{bucket_name}/#{key}"
+    response_header(url, :content_disposition)
+  end
+
+  def response_header(url, header_name)
+    RestClient.head(url.to_s) do |response|
+      response.headers[header_name]
+    end
   end
 end

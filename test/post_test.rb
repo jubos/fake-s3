@@ -15,7 +15,7 @@ class PostTest < Test::Unit::TestCase
       assert_equal(response.code, 200)
       assert_equal(response.headers[:access_control_allow_origin],"*")
       assert_equal(response.headers[:access_control_allow_methods], "PUT, POST, HEAD, GET, OPTIONS")
-      assert_equal(response.headers[:access_control_allow_headers], "Accept, Content-Type, Authorization, Content-Length, ETag, X-CSRF-Token")
+      assert_equal(response.headers[:access_control_allow_headers], "Accept, Content-Type, Authorization, Content-Length, ETag, X-CSRF-Token, Content-Disposition")
       assert_equal(response.headers[:access_control_expose_headers], "ETag")
     end
   end

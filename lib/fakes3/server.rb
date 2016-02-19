@@ -124,6 +124,7 @@ module FakeS3
           response.header['Content-Encoding'] = real_obj.content_encoding
         end
 
+        response['Content-Disposition'] = real_obj.content_disposition if real_obj.content_disposition
         stat = File::Stat.new(real_obj.io.path)
 
         response['Last-Modified'] = Time.iso8601(real_obj.modified_date).httpdate
@@ -334,7 +335,7 @@ module FakeS3
 
       response['Access-Control-Allow-Origin']   = '*'
       response['Access-Control-Allow-Methods']  = 'PUT, POST, HEAD, GET, OPTIONS'
-      response['Access-Control-Allow-Headers']  = 'Accept, Content-Type, Authorization, Content-Length, ETag, X-CSRF-Token'
+      response['Access-Control-Allow-Headers']  = 'Accept, Content-Type, Authorization, Content-Length, ETag, X-CSRF-Token, Content-Disposition'
       response['Access-Control-Expose-Headers'] = 'ETag'
     end
 
