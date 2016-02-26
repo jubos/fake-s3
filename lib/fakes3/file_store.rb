@@ -15,17 +15,47 @@ module FakeS3
     # sub second precision.
     SUBSECOND_PRECISION = 3
 
-    def initialize(root)
+    def initialize(root, cachedstore)
       @root = root
+      @use_cache = cachedstore
+      rebuild()
+    end
+
+    def rebuild()
       @buckets = []
       @bucket_hash = {}
-      Dir[File.join(root,"*")].each do |bucket|
+
+      # First build all empty buckets
+      Dir[File.join(@root,"*",File::SEPARATOR)].each do |bucket|
         bucket_name = File.basename(bucket)
         bucket_obj = Bucket.new(bucket_name,Time.now,[])
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
       end
+
+      #Next reload all the objects in these buckets
+      Dir[File.join(@root,"**",SHUCK_METADATA_DIR,File::SEPARATOR)].each do |obj_root|
+        # Need to be careful with the pattern because we don't know if @root has a trailing separator
+        pattern = "^" + File.join(@root,"(.*?)","(.*)",SHUCK_METADATA_DIR, File::SEPARATOR) + "$"
+        bucket_name, object_name = obj_root.match(pattern).captures
+
+        bucket = @bucket_hash[bucket_name]
+
+        metadata_struct = YAML.load(File.open(File.join(obj_root,"metadata"),'rb'))
+
+        # Now create the object
+        obj = S3Object.new
+        obj.name = object_name
+        obj.md5 = metadata_struct[:md5]
+        obj.content_type = metadata_struct[:content_type]
+        obj.size = metadata_struct[:size]
+        obj.modified_date = metadata_struct[:modified_date]
+
+        bucket.add(obj)
+      end
+
     end
+
 
     # Pass a rate limit in bytes per second
     def rate_limit=(rate_limit)
@@ -44,6 +74,10 @@ module FakeS3
       else
         RateLimitableFile.rate_limit = nil
       end
+    end
+
+    def use_cache
+      @use_cache
     end
 
     def buckets
@@ -74,6 +108,7 @@ module FakeS3
       raise BucketNotEmpty if bucket.objects.count > 0
       FileUtils.rm_r(get_bucket_folder(bucket))
       @bucket_hash.delete(bucket_name)
+      @buckets = @bucket_hash.values
     end
 
     def get_object(bucket,object_name, request)
