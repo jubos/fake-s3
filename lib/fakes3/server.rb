@@ -231,7 +231,7 @@ module FakeS3
 
     def do_POST(request,response)
       s_req = normalize_request(request)
-      key   = request.query['key']
+      key   = s_req.object
       query = CGI::parse(request.request_uri.query || "")
 
       if query.has_key?('uploads')
