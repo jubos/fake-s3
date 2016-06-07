@@ -16,6 +16,7 @@ module FakeS3
     CREATE_BUCKET = "CREATE_BUCKET"
     LIST_BUCKETS = "LIST_BUCKETS"
     LS_BUCKET = "LS_BUCKET"
+    LIST_PARTS = "LIST_PARTS"
     HEAD = "HEAD"
     STORE = "STORE"
     COPY = "COPY"
@@ -87,6 +88,15 @@ module FakeS3
           response.body = XmlAdapter.error_no_such_bucket(s_req.bucket)
           response['Content-Type'] = "application/xml"
         end
+      when 'LIST_PARTS'
+        bucket = s_req.bucket
+        key = s_req.object
+        upload_id = request.query['uploadId']
+        parts = @store.list_object_parts(bucket, upload_id, key, request)
+
+        response.status = 200
+        response['Content-Type'] = 'application/xml'
+        response.body = XmlAdapter.list_parts(s_req, upload_id, parts)
       when 'GET_ACL'
         response.status = 200
         response.body = XmlAdapter.acl()
@@ -231,10 +241,10 @@ module FakeS3
 
     def do_POST(request,response)
       s_req = normalize_request(request)
-      key   = s_req.object
       query = CGI::parse(request.request_uri.query || "")
 
       if query.has_key?('uploads')
+        key = s_req.object
         upload_id = SecureRandom.hex
 
         response.body = <<-eos.strip
@@ -373,6 +383,8 @@ module FakeS3
         else
           if query["acl"] == ""
             s_req.type = Request::GET_ACL
+          elsif query['uploadId']
+            s_req.type = Request::LIST_PARTS
           else
             s_req.type = Request::GET
           end
