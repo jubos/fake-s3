@@ -1,10 +1,7 @@
-FROM debian:jessie
+FROM ruby:2.3-alpine
 MAINTAINER Nikhil Narula
 
 ENV DEBIAN_FRONTEND noninteractive
-
-# install Ruby
-RUN apt-get update && apt-get install -yqq git ruby rubygems-integration
 
 ADD . $HOME
 
