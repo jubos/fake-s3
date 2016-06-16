@@ -203,6 +203,7 @@ module FakeS3
         obj.content_type = metadata_struct[:content_type]
         obj.size = metadata_struct[:size]
         obj.modified_date = metadata_struct[:modified_date]
+        obj.storage_class = metadata_struct[:amazon_metadata]['storage-class'] || 'STANDARD'
 
         bucket.add(obj)
         return obj
