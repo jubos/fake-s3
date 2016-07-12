@@ -13,7 +13,7 @@ module FakeS3
 
     # Sort by the object's name
     def <=>(object)
-      @name <=> object.name
+      @name <=> (object && object.name)
     end
   end
 end
