@@ -1,11 +1,16 @@
 require 'test/test_helper'
 require 'fileutils'
+require "rubygems/version"
 
 class S3CmdTest < Test::Unit::TestCase
   def setup
     config = File.expand_path(File.join(File.dirname(__FILE__),'local_s3_cfg'))
     raise "Please install s3cmd" if `which s3cmd`.empty?
     @s3cmd = "s3cmd --config #{config}"
+
+    # Check s3cmd version to know output message format
+    `#{@s3cmd} --version` =~ /(\d+\.\d+\.\d+)/
+    @s3cmd_is_v160_or_later = Gem::Version.create($1) >= Gem::Version.create("1.6.0")
   end
 
   def teardown
@@ -24,7 +29,12 @@ class S3CmdTest < Test::Unit::TestCase
       end
     end
     output = `#{@s3cmd} put /tmp/fakes3_upload s3://s3cmd_bucket/upload`
-    assert_match(/stored/,output)
+
+    if @s3cmd_is_v160_or_later
+      assert_match(/upload: /,output)
+    else
+      assert_match(/stored/,output)
+    end
 
     FileUtils.rm("/tmp/fakes3_upload")
   end
@@ -36,7 +46,12 @@ class S3CmdTest < Test::Unit::TestCase
       end
     end
     output = `#{@s3cmd} put /tmp/fakes3_acl_upload s3://s3cmd_bucket/acl_upload`
-    assert_match(/stored/,output)
+
+    if @s3cmd_is_v160_or_later
+      assert_match(/upload: /,output)
+    else
+      assert_match(/stored/,output)
+    end
 
     output = `#{@s3cmd} --force setacl -P s3://s3cmd_bucket/acl_upload`
   end
