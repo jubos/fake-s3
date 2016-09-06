@@ -1,6 +1,7 @@
 require 'time'
 require 'webrick'
 require 'webrick/https'
+require 'webrick/log'
 require 'openssl'
 require 'securerandom'
 require 'cgi'
@@ -506,17 +507,20 @@ module FakeS3
 
 
   class Server
-    def initialize(address,port,store,hostname,ssl_cert_path,ssl_key_path)
+    def initialize(address,port,store,hostname,ssl_cert_path,ssl_key_path,daemonize=false,log=nil)
       @address = address
       @port = port
       @store = store
       @hostname = hostname
       @ssl_cert_path = ssl_cert_path
       @ssl_key_path = ssl_key_path
+      @daemonize = daemonize
+      @log = log
       webrick_config = {
         :BindAddress => @address,
         :Port => @port
       }
+      webrick_config[:Logger] = WEBrick::Log.new(@log) if @daemonize
       if !@ssl_cert_path.to_s.empty?
         webrick_config.merge!(
           {
@@ -526,6 +530,7 @@ module FakeS3
           }
         )
       end
+      WEBrick::Daemon.start if @daemonize
       @server = WEBrick::HTTPServer.new(webrick_config)
     end
 
