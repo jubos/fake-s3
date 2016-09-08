@@ -161,7 +161,7 @@ module FakeS3
       end
     end
 
-    def do_PUT(request,response)
+    def do_PUT(request, response)
       s_req = normalize_request(request)
       query = CGI::parse(request.request_uri.query || "")
 
@@ -258,7 +258,7 @@ module FakeS3
 
         response.body = XmlAdapter.complete_multipart_result real_obj
       elsif request.content_type =~ /^multipart\/form-data; boundary=(.+)/
-        key=request.query['key']
+        key = request.query['key']
 
         success_action_redirect = request.query['success_action_redirect']
         success_action_status   = request.query['success_action_status']
@@ -300,7 +300,7 @@ module FakeS3
       response['Access-Control-Expose-Headers'] = 'ETag'
     end
 
-    def do_DELETE(request,response)
+    def do_DELETE(request, response)
       s_req = normalize_request(request)
 
       case s_req.type
@@ -326,7 +326,7 @@ module FakeS3
 
     private
 
-    def normalize_delete(webrick_req,s_req)
+    def normalize_delete(webrick_req, s_req)
       path = webrick_req.path
       path_len = path.size
       query = webrick_req.query
@@ -353,7 +353,7 @@ module FakeS3
       end
     end
 
-    def normalize_get(webrick_req,s_req)
+    def normalize_get(webrick_req, s_req)
       path = webrick_req.path
       path_len = path.size
       query = webrick_req.query
@@ -382,7 +382,7 @@ module FakeS3
       end
     end
 
-    def normalize_put(webrick_req,s_req)
+    def normalize_put(webrick_req, s_req)
       path = webrick_req.path
       path_len = path.size
       if path == "/"
@@ -432,11 +432,10 @@ module FakeS3
       path_len = path.size
 
       s_req.path = webrick_req.query['key']
-
       s_req.webrick_request = webrick_req
 
       if s_req.is_path_style
-        elems = path[1,path_len].split("/")
+        elems = path[1, path_len].split("/")
         s_req.bucket = elems[0]
         s_req.object = elems[1..-1].join('/') if elems.size >= 2
       else
@@ -478,7 +477,7 @@ module FakeS3
       return s_req
     end
 
-    def parse_complete_multipart_upload request
+    def parse_complete_multipart_upload(request)
       parts_xml   = ""
       request.body { |chunk| parts_xml << chunk }
 
