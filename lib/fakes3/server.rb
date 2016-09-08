@@ -77,7 +77,7 @@ module FakeS3
           query = {
             :marker => s_req.query["marker"] ? s_req.query["marker"].to_s : nil,
             :prefix => s_req.query["prefix"] ? s_req.query["prefix"].to_s : nil,
-            :max_keys => s_req.query["max-keys"] ? Integer(s_req.query["max-keys"].to_s) : nil,
+            :max_keys => s_req.query["max-keys"] ? s_req.query["max-keys"].to_i : nil,
             :delimiter => s_req.query["delimiter"] ? s_req.query["delimiter"].to_s : nil
           }
           bq = bucket_obj.query_for_range(query)
