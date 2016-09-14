@@ -21,7 +21,8 @@ module FakeS3
       @bucket_hash = {}
       Dir[File.join(root,"*")].each do |bucket|
         bucket_name = File.basename(bucket)
-        bucket_obj = Bucket.new(bucket_name,Time.now,get_objects(bucket_name, bucket))
+        puts "root bucket: #{bucket_name}"
+        bucket_obj = Bucket.new(bucket_name,Time.now, get_objects(bucket_name, bucket))
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
       end
@@ -278,11 +279,24 @@ module FakeS3
       end
       return metadata
     end
-     private
-     def get_objects bucket_name, path
-       Dir[File.join(path, '*')].map do |filepath|
-         get_object(bucket_name, File.basename(filepath), nil)
-       end
-     end 
+    private
+    def get_objects bucket_name, path, root_path=nil
+        if root_path.nil?
+            root_path = path
+        end
+        
+        objects = []
+        if File.directory?(path)
+            Dir.new(path).each do |pathname|
+                next if ['.', '..'].include?(pathname)
+                if pathname == SHUCK_METADATA_DIR
+                    objects << get_object(bucket_name, path[root_path.length+1..-1], nil)
+                    else
+                    objects += get_objects(bucket_name, File.join(path, pathname), root_path)
+                end
+            end
+        end
+        return objects
+    end
   end
 end
