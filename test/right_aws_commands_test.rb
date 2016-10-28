@@ -77,7 +77,7 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     assert_equal ["delimited/"], common_prefixes
 
     common_prefixes = []
-    @s3.incrementally_list_bucket("s3media", {:prefix => "delimited/", :delimiter => '/', "max-keys" => 5}) do |currentResponse|
+    @s3.incrementally_list_bucket("s3media", {:prefix => "delimited/", :delimiter => '/', "max-keys" => 100}) do |currentResponse|
       key_names += currentResponse[:contents].map do |key|
         key[:key]
       end
