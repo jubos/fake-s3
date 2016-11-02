@@ -50,7 +50,7 @@ module FakeS3
       @port = server.config[:Port]
       @root_hostnames = ['localhost','s3.amazonaws.com','s3.localhost']
       extra_hostnames = Array(hostnames)
-      @root_hostnames << extra_hostnames
+      @root_hostnames += extra_hostnames
     end
 
     def validate_request(request)
