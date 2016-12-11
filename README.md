@@ -1,15 +1,12 @@
 ## Introduction
-FakeS3 is a lightweight server that responds to the same calls Amazon S3 responds to.
-It is extremely useful for testing of S3 in a sandbox environment without actually
-making calls to Amazon, which not only require network, but also cost you precious dollars.
+FakeS3 is a lightweight server that responds to the same API of Amazon S3.
+
+It is extremely useful for testing of S3 in a sandbox environment without actually making calls to Amazon, which not only requires a network connection, but also costs money with every use.
 
 The goal of Fake S3 is to minimize runtime dependencies and be more of a
-development tool to test S3 calls in your code rather than a production server
-looking to duplicate S3 functionality.  Trying RiakCS, ParkPlace/Boardwalk, or
-Ceph might be a place to start if that is your goal.
+development tool to test S3 calls in your code rather than a production server looking to duplicate S3 functionality.
 
-FakeS3 doesn't support all of the S3 command set, but the basic ones like put, get,
-list, copy, and make bucket are supported.  More coming soon.
+Many commands are supported, including put, get, list, copy, and make bucket.
 
 ## Installation
 
@@ -17,7 +14,7 @@ list, copy, and make bucket are supported.  More coming soon.
 
 ## Running
 
-To run a fakes3 server, you just specify a root and a port.
+To run the server, you just specify a root and a port.
 
     fakes3 -r /mnt/fakes3_root -p 4567
 
@@ -29,34 +26,35 @@ libraries out there, and please do mention if other clients work or not.
 
 Here is a running list of [supported clients](https://github.com/jubos/fake-s3/wiki/Supported-Clients "Supported Clients")
 
-## Running Tests
+## Contributing
 
-There are some pre-requesites to actually being able to run the unit/integration tests
+We have a contributor license agreement (CLA) based off of Google and Apache's CLA. If you would feel comfortable contributing to, say, Angular.js, you should feel comfortable with this CLA.
 
-### On OSX
+To sign the CLA:
 
-Edit your /etc/hosts and add the following line:
+[Click here and fill out the form.](https://docs.google.com/forms/d/e/1FAIpQLSeKKSKNNz5ji1fd5bbu5RaGFbhD45zEaCnAjzBZPpzOaXQsvQ/viewform)
+
+If you're interested, [this blog post](https://julien.ponge.org/blog/in-defense-of-contributor-license-agreements/) discusses why to use a CLA, and even goes over the text of the CLA we based ours on.
+
+
+## Testing
+
+There are some pre-requesites to actually being able to run the unit/integration tests.
+
+On macOS, edit your /etc/hosts and add the following line:
 
     127.0.0.1 posttest.localhost
 
-Then ensure that the following packages are installed (boto, s3cmd)
+Then ensure that the following packages are installed (boto, s3cmd):
 
     > pip install boto
     > brew install s3cmd
 
 
-Start the test server using
+Start the test server using:
 
     rake test_server
 
-Then in another terminal window run
+Finally, in another terminal window run:
 
     rake test
-
-It is a still a TODO to get this to be just one command
-
-## More Information
-
-Check out the [wiki](https://github.com/jubos/fake-s3/wiki)
-
-[![Join the chat at https://gitter.im/jubos/fake-s3](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jubos/fake-s3?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
