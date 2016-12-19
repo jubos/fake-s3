@@ -12,3 +12,5 @@ test_root
 
 # Don't check in the Gemfile.lock
 Gemfile.lock
+
+.DS_Store
