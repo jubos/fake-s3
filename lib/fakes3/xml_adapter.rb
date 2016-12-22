@@ -218,5 +218,36 @@ module FakeS3
       }
       output
     end
+
+    def self.list_parts(request, upload_id, parts)
+      output = ""
+      xml = Builder::XmlMarkup.new(:target => output)
+      xml.instruct! :xml, :version=>"1.0", :encoding=>"UTF-8"
+      xml.ListPartsResult { |result|
+        result.Bucket(request.bucket)
+        result.Key(request.object)
+        result.UploadId(upload_id)
+        result.Initiator { |initiator|
+          initiator.ID("fake id")
+          initiator.DisplayName("fake name")
+        }
+        result.Owner { |owner|
+          owner.ID("fake id")
+          owner.DisplayName("fake name")
+        }
+        result.StorageClass("STANDARD")
+        result.PartNumberMarker(0)
+        result.MaxParts(parts.length)
+        result.IsTruncated("false")
+        parts.each do |part|
+          result.Part { |part_node|
+            part_node.PartNumber(part[:part_number])
+            part_node.LastModified(part[:last_modified])
+            part_node.ETag("\"#{part[:etag]}\"")
+            part_node.Size(part[:size])
+          }
+        end
+      }
+    end
   end
 end

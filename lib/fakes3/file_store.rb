@@ -213,6 +213,25 @@ module FakeS3
       end
     end
 
+    def list_object_parts(bucket, upload_id, object_name, request)
+      suffix      = "#{upload_id}_#{object_name}"
+      upload_path = File.join(@root, bucket)
+
+      ret = []
+      Dir.glob("#{upload_path}/#{suffix}*") do |filename|
+        part_num = filename[/#{suffix}_part(.)/, 1].to_i
+        obj = get_object(bucket, "#{suffix}_part#{part_num}", request)
+
+        ret << {
+          part_number: part_num,
+          last_modified: obj.modified_date,
+          etag: obj.md5,
+          size: obj.size
+        }
+      end
+      ret
+    end
+
     def combine_object_parts(bucket, upload_id, object_name, parts, request)
       upload_path   = File.join(@root, bucket.name)
       base_path     = File.join(upload_path, "#{upload_id}_#{object_name}")
