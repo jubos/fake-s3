@@ -31,4 +31,4 @@ Here is a running list of [supported clients](https://github.com/jubos/fake-s3/w
 
 Contributions in the form of pull requests, bug reports, documentation, or anything else are welcome! Please read the CONTRIBUTING.md file for more info:
 
-(https://github.com/jubos/fake-s3/CONTRIBUTING.md)[https://github.com/jubos/fake-s3/CONTRIBUTING.md]
+[https://github.com/jubos/fake-s3/CONTRIBUTING.md](https://github.com/jubos/fake-s3/CONTRIBUTING.md)
