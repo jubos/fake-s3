@@ -1,3 +1,5 @@
+[![Code Climate](https://codeclimate.com/github/jubos/fake-s3/badges/gpa.svg)](https://codeclimate.com/github/jubos/fake-s3)
+
 ## Introduction
 
 Fake S3 is a lightweight server that responds to the same API of Amazon S3.
