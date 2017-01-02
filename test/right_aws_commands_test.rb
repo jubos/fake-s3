@@ -110,6 +110,20 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     assert_equal "Hello World",obj[:object]
   end
 
+  def test_content_encoding
+    foo_compressed = Zlib::Deflate.deflate("foo")
+    result = @s3.put("s3media", "foo", foo_compressed, {"content-encoding"=>"gzip"})
+    obj = @s3.get("s3media", "foo")
+    assert_equal "gzip", obj[:headers]["content-encoding"]
+  end
+
+  def test_content_encoding_data
+    foo_compressed = Zlib::Deflate.deflate("foo-two")
+    result = @s3.put("s3media", "foo-two", foo_compressed, {"content-encoding"=>"gzip"})
+    obj = @s3.get("s3media", "foo-two")
+    assert_equal "foo-two", Zlib::Inflate::inflate(obj[:object])
+  end
+
   def test_copy_replace_metadata
     @s3.put("s3media","foo","Hello World",{"content-type"=>"application/octet-stream"})
     obj = @s3.get("s3media","foo")
