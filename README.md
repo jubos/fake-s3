@@ -1,3 +1,5 @@
+![Fake S3](static/logo.png "Fake S3")
+
 ## Introduction
 
 Fake S3 is a lightweight server that responds to the same API of Amazon S3.
@@ -18,6 +20,14 @@ Many commands are supported, including put, get, list, copy, and make bucket.
 To run the server, you just specify a root and a port.
 
     fakes3 -r /mnt/fakes3_root -p 4567
+
+## Licensing
+
+As of the latest version, we are licensing with Supported Source. Visit https://supportedsource.org/projects/fake-s3 to get a license.
+
+Depending on your company's size, the license may be free. It is also free for individuals.
+
+[![Buy License](static/button.svg)](https://supportedsource.org/projects/fake-s3)
 
 ## Connecting to Fake S3
 

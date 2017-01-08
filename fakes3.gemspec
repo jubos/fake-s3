@@ -6,11 +6,11 @@ Gem::Specification.new do |s|
   s.version     = FakeS3::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Curtis Spencer"]
-  s.email       = ["thorin@gmail.com"]
+  s.email       = ["fakes3@supportedsource.org"]
   s.homepage    = "https://github.com/jubos/fake-s3"
-  s.summary     = %q{Fake S3 is a server that simulates S3 commands so you can test your S3 functionality in your projects}
-  s.description = %q{Use Fake S3 to test basic S3 functionality without actually connecting to S3}
-  s.license     = "MIT"
+  s.summary     = %q{Fake S3 is a server that simulates Amazon S3 commands so you can test your S3 functionality in your projects}
+  s.description = %q{Use Fake S3 to test basic Amazon S3 functionality without actually connecting to AWS}
+  s.license     = "Supported Source"
 
   s.rubyforge_project = "fakes3"
 
