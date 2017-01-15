@@ -160,6 +160,7 @@ module FakeS3
         response['Content-Length'] = File::Stat.new(real_obj.io.path).size
         if s_req.http_verb == 'HEAD'
           response.body = ""
+	   real_obj.io.close
         else
           response.body = real_obj.io
         end
