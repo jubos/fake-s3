@@ -76,21 +76,20 @@ module FakeS3
       @bucket_hash.delete(bucket_name)
     end
 
-    def get_object(bucket,object_name, request)
+    def get_object(bucket, object_name, request)
       begin
         real_obj = S3Object.new
         obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
-        metadata = File.open(File.join(obj_root,"metadata")) { |file| YAML::load(file) }
+        metadata = File.open(File.join(obj_root, "metadata")) { |file| YAML::load(file) }
         real_obj.name = object_name
         real_obj.md5 = metadata[:md5]
         real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
         real_obj.content_encoding = metadata.fetch(:content_encoding)
-        #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
-        real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"), 'rb')
+        real_obj.io = RateLimitableFile.open(File.join(obj_root, "content"), 'rb')
         real_obj.size = metadata.fetch(:size) { 0 }
         real_obj.creation_date = File.ctime(obj_root).utc.iso8601(SUBSECOND_PRECISION)
         real_obj.modified_date = metadata.fetch(:modified_date) do
-          File.mtime(File.join(obj_root,"content")).utc.iso8601(SUBSECOND_PRECISION)
+          File.mtime(File.join(obj_root, "content")).utc.iso8601(SUBSECOND_PRECISION)
         end
         real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
         return real_obj
@@ -152,7 +151,7 @@ module FakeS3
       obj.size = src_metadata[:size]
       obj.modified_date = src_metadata[:modified_date]
 
-      src_obj = src_bucket.find(src_name)
+      src_bucket.find(src_name)
       dst_bucket.add(obj)
       return obj
     end
@@ -169,7 +168,7 @@ module FakeS3
         boundary = WEBrick::HTTPUtils::dequote(boundary)
         form_data = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
 
-        if form_data['file'] == nil or form_data['file'] == ""
+        if form_data['file'] == nil || form_data['file'] == ""
           raise WEBrick::HTTPStatus::BadRequest
         end
 
@@ -183,18 +182,18 @@ module FakeS3
 
     def do_store_object(bucket, object_name, filedata, request)
       begin
-        filename = File.join(@root,bucket.name,object_name)
+        filename = File.join(@root, bucket.name, object_name)
         FileUtils.mkdir_p(filename)
 
-        metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
+        metadata_dir = File.join(filename, SHUCK_METADATA_DIR)
         FileUtils.mkdir_p(metadata_dir)
 
-        content = File.join(filename,SHUCK_METADATA_DIR,"content")
-        metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
+        content = File.join(filename, SHUCK_METADATA_DIR, "content")
+        metadata = File.join(filename, SHUCK_METADATA_DIR, "metadata")
 
         File.open(content,'wb') { |f| f << filedata }
 
-        metadata_struct = create_metadata(content,request)
+        metadata_struct = create_metadata(content, request)
         File.open(metadata,'w') do |f|
           f << YAML::dump(metadata_struct)
         end

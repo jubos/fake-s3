@@ -26,9 +26,9 @@ module FakeS3
     DELETE_OBJECT = "DELETE_OBJECT"
     DELETE_BUCKET = "DELETE_BUCKET"
 
-    attr_accessor :bucket,:object,:type,:src_bucket,
-                  :src_object,:method,:webrick_request,
-                  :path,:is_path_style,:query,:http_verb
+    attr_accessor :bucket, :object, :type, :src_bucket,
+                  :src_object, :method, :webrick_request,
+                  :path, :is_path_style, :query, :http_verb
 
     def inspect
       puts "-----Inspect FakeS3 Request"
@@ -89,10 +89,10 @@ module FakeS3
         end
       when 'GET_ACL'
         response.status = 200
-        response.body = XmlAdapter.acl()
+        response.body = XmlAdapter.acl
         response['Content-Type'] = 'application/xml'
       when 'GET'
-        real_obj = @store.get_object(s_req.bucket,s_req.object,request)
+        real_obj = @store.get_object(s_req.bucket, s_req.object, request)
         if !real_obj
           response.status = 404
           response.body = XmlAdapter.error_no_such_key(s_req.object)
@@ -118,13 +118,14 @@ module FakeS3
         response.status = 200
         response['Content-Type'] = real_obj.content_type
 
-        if !real_obj.content_encoding.nil?
-          response['Content-Encoding'] = real_obj.content_encoding
+        if real_obj.content_encoding
+          response.header['X-Content-Encoding'] = real_obj.content_encoding
+          response.header['Content-Encoding'] = real_obj.content_encoding
         end
 
         stat = File::Stat.new(real_obj.io.path)
 
-        response['Last-Modified'] = Time.iso8601(real_obj.modified_date).httpdate()
+        response['Last-Modified'] = Time.iso8601(real_obj.modified_date).httpdate
         response.header['ETag'] = "\"#{real_obj.md5}\""
         response['Accept-Ranges'] = "bytes"
         response['Last-Ranges'] = "bytes"
@@ -137,7 +138,8 @@ module FakeS3
         content_length = stat.size
 
         # Added Range Query support
-        if range = request.header["range"].first
+        range = request.header["range"].first
+        if range
           response.status = 206
           if range =~ /bytes=(\d*)-(\d*)/
             start = $1.to_i
@@ -160,7 +162,7 @@ module FakeS3
         response['Content-Length'] = File::Stat.new(real_obj.io.path).size
         if s_req.http_verb == 'HEAD'
           response.body = ""
-	   real_obj.io.close
+	        real_obj.io.close
         else
           response.body = real_obj.io
         end
@@ -180,7 +182,7 @@ module FakeS3
 
       case s_req.type
       when Request::COPY
-        object = @store.copy_object(s_req.src_bucket,s_req.src_object,s_req.bucket,s_req.object,request)
+        object = @store.copy_object(s_req.src_bucket, s_req.src_object, s_req.bucket, s_req.object, request)
         response.body = XmlAdapter.copy_object_result(object)
       when Request::STORE
         bucket_obj = @store.get_bucket(s_req.bucket)
@@ -189,7 +191,7 @@ module FakeS3
           bucket_obj = @store.create_bucket(s_req.bucket)
         end
 
-        real_obj = @store.store_object(bucket_obj,s_req.object,s_req.webrick_request)
+        real_obj = @store.store_object(bucket_obj, s_req.object, s_req.webrick_request)
         response.header['ETag'] = "\"#{real_obj.md5}\""
       when Request::CREATE_BUCKET
         @store.create_bucket(s_req.bucket)

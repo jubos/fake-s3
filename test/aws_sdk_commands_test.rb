@@ -54,6 +54,5 @@ class AwsSdkCommandsTest < Test::Unit::TestCase
     assert metadata_file.has_key?(:amazon_metadata), 'Metadata file does not contain an :amazon_metadata key'
     assert metadata_file[:amazon_metadata].has_key?('storage-class'), ':amazon_metadata does not contain field "storage-class"'
     assert_equal 'REDUCED_REDUNDANCY', metadata_file[:amazon_metadata]['storage-class'], '"storage-class" does not equal expected value "REDUCED_REDUNDANCY"'
-
   end
 end
