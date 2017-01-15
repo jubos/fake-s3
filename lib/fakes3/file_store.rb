@@ -51,7 +51,7 @@ module FakeS3
     end
 
     def get_bucket_folder(bucket)
-      File.join(@root,bucket.name)
+      File.join(@root, bucket.name)
     end
 
     def get_bucket(bucket)
@@ -59,8 +59,8 @@ module FakeS3
     end
 
     def create_bucket(bucket)
-      FileUtils.mkdir_p(File.join(@root,bucket))
-      bucket_obj = Bucket.new(bucket,Time.now,[])
+      FileUtils.mkdir_p(File.join(@root, bucket))
+      bucket_obj = Bucket.new(bucket, Time.now, [])
       if !@bucket_hash[bucket]
         @buckets << bucket_obj
         @bucket_hash[bucket] = bucket_obj
@@ -86,7 +86,7 @@ module FakeS3
         real_obj.content_type = metadata.fetch(:content_type) { "application/octet-stream" }
         real_obj.content_encoding = metadata.fetch(:content_encoding)
         #real_obj.io = File.open(File.join(obj_root,"content"),'rb')
-        real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"),'rb')
+        real_obj.io = RateLimitableFile.open(File.join(obj_root,"content"), 'rb')
         real_obj.size = metadata.fetch(:size) { 0 }
         real_obj.creation_date = File.ctime(obj_root).utc.iso8601(SUBSECOND_PRECISION)
         real_obj.modified_date = metadata.fetch(:modified_date) do
@@ -101,14 +101,14 @@ module FakeS3
       end
     end
 
-    def object_metadata(bucket,object)
+    def object_metadata(bucket, object)
     end
 
     def copy_object(src_bucket_name, src_name, dst_bucket_name, dst_name, request)
       src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
-      src_metadata_filename = File.join(src_root,"metadata")
-      src_metadata = YAML.load(File.open(src_metadata_filename,'rb').read)
-      src_content_filename = File.join(src_root,"content")
+      src_metadata_filename = File.join(src_root, "metadata")
+      src_metadata = YAML.load(File.open(src_metadata_filename, 'rb').read)
+      src_content_filename = File.join(src_root, "content")
 
       dst_filename= File.join(@root,dst_bucket_name,dst_name)
       FileUtils.mkdir_p(dst_filename)
@@ -116,12 +116,12 @@ module FakeS3
       metadata_dir = File.join(dst_filename,SHUCK_METADATA_DIR)
       FileUtils.mkdir_p(metadata_dir)
 
-      content = File.join(metadata_dir,"content")
-      metadata = File.join(metadata_dir,"metadata")
+      content = File.join(metadata_dir, "content")
+      metadata = File.join(metadata_dir, "metadata")
 
       if src_bucket_name != dst_bucket_name || src_name != dst_name
-        File.open(content,'wb') do |f|
-          File.open(src_content_filename,'rb') do |input|
+        File.open(content, 'wb') do |f|
+          File.open(src_content_filename, 'rb') do |input|
             f << input.read
           end
         end
@@ -166,7 +166,7 @@ module FakeS3
       match = content_type.match(/^multipart\/form-data; boundary=(.+)/)
       boundary = match[1] if match
       if boundary
-        boundary  = WEBrick::HTTPUtils::dequote(boundary)
+        boundary = WEBrick::HTTPUtils::dequote(boundary)
         form_data = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
 
         if form_data['file'] == nil or form_data['file'] == ""
@@ -189,7 +189,7 @@ module FakeS3
         metadata_dir = File.join(filename,SHUCK_METADATA_DIR)
         FileUtils.mkdir_p(metadata_dir)
 
-        content  = File.join(filename,SHUCK_METADATA_DIR,"content")
+        content = File.join(filename,SHUCK_METADATA_DIR,"content")
         metadata = File.join(filename,SHUCK_METADATA_DIR,"metadata")
 
         File.open(content,'wb') { |f| f << filedata }
@@ -260,7 +260,7 @@ module FakeS3
     end
 
     # TODO: abstract getting meta data from request.
-    def create_metadata(content,request)
+    def create_metadata(content, request)
       metadata = {}
       metadata[:md5] = Digest::MD5.file(content).hexdigest
       metadata[:content_type] = request.header["content-type"].first
