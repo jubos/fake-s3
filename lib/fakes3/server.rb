@@ -489,8 +489,8 @@ module FakeS3
       parts_xml   = ""
       request.body { |chunk| parts_xml << chunk }
 
-      # TODO: I suck at parsing xml
-      parts_xml = parts_xml.scan /\<Part\>.*?<\/Part\>/m
+      # TODO: improve parsing xml
+      parts_xml = parts_xml.scan(/\<Part\>.*?<\/Part\>/m)
 
       parts_xml.collect do |xml|
         {
