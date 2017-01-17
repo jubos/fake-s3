@@ -8,7 +8,8 @@ require 'yaml'
 
 module FakeS3
   class FileStore
-    SHUCK_METADATA_DIR = ".fakes3_metadataFFF"
+    FAKE_S3_METADATA_DIR = ".fakes3_metadataFFF"
+
     # S3 clients with overly strict date parsing fails to parse ISO 8601 dates
     # without any sub second precision (e.g. jets3t v0.7.2), and the examples
     # given in the official AWS S3 documentation specify three (3) decimals for
@@ -79,7 +80,7 @@ module FakeS3
     def get_object(bucket, object_name, request)
       begin
         real_obj = S3Object.new
-        obj_root = File.join(@root,bucket,object_name,SHUCK_METADATA_DIR)
+        obj_root = File.join(@root,bucket,object_name,FAKE_S3_METADATA_DIR)
         metadata = File.open(File.join(obj_root, "metadata")) { |file| YAML::load(file) }
         real_obj.name = object_name
         real_obj.md5 = metadata[:md5]
@@ -104,7 +105,7 @@ module FakeS3
     end
 
     def copy_object(src_bucket_name, src_name, dst_bucket_name, dst_name, request)
-      src_root = File.join(@root,src_bucket_name,src_name,SHUCK_METADATA_DIR)
+      src_root = File.join(@root,src_bucket_name,src_name,FAKE_S3_METADATA_DIR)
       src_metadata_filename = File.join(src_root, "metadata")
       src_metadata = YAML.load(File.open(src_metadata_filename, 'rb').read)
       src_content_filename = File.join(src_root, "content")
@@ -112,7 +113,7 @@ module FakeS3
       dst_filename= File.join(@root,dst_bucket_name,dst_name)
       FileUtils.mkdir_p(dst_filename)
 
-      metadata_dir = File.join(dst_filename,SHUCK_METADATA_DIR)
+      metadata_dir = File.join(dst_filename,FAKE_S3_METADATA_DIR)
       FileUtils.mkdir_p(metadata_dir)
 
       content = File.join(metadata_dir, "content")
@@ -185,11 +186,11 @@ module FakeS3
         filename = File.join(@root, bucket.name, object_name)
         FileUtils.mkdir_p(filename)
 
-        metadata_dir = File.join(filename, SHUCK_METADATA_DIR)
+        metadata_dir = File.join(filename, FAKE_S3_METADATA_DIR)
         FileUtils.mkdir_p(metadata_dir)
 
-        content = File.join(filename, SHUCK_METADATA_DIR, "content")
-        metadata = File.join(filename, SHUCK_METADATA_DIR, "metadata")
+        content = File.join(filename, FAKE_S3_METADATA_DIR, "content")
+        metadata = File.join(filename, FAKE_S3_METADATA_DIR, "metadata")
 
         File.open(content,'wb') { |f| f << filedata }
 
@@ -225,7 +226,7 @@ module FakeS3
 
       parts.sort_by { |part| part[:number] }.each do |part|
         part_path    = "#{base_path}_part#{part[:number]}"
-        content_path = File.join(part_path, SHUCK_METADATA_DIR, 'content')
+        content_path = File.join(part_path, FAKE_S3_METADATA_DIR, 'content')
 
         File.open(content_path, 'rb') { |f| chunk = f.read }
         etag = Digest::MD5.hexdigest(chunk)
