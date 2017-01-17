@@ -304,7 +304,7 @@ module FakeS3
 
       response['Content-Type']                  = 'text/xml'
       response['Access-Control-Allow-Origin']   = '*'
-      response['Access-Control-Allow-Headers']  = 'Authorization, Content-Length'
+      response['Access-Control-Allow-Headers']  = 'Authorization, Content-Length, cache-control, x-requested-with'
       response['Access-Control-Expose-Headers'] = 'ETag'
     end
 
@@ -328,7 +328,7 @@ module FakeS3
 
       response['Access-Control-Allow-Origin']   = '*'
       response['Access-Control-Allow-Methods']  = 'PUT, POST, HEAD, GET, OPTIONS'
-      response['Access-Control-Allow-Headers']  = 'Accept, Content-Type, Authorization, Content-Length, ETag'
+      response['Access-Control-Allow-Headers']  = 'Accept, Content-Type, Authorization, Content-Length, ETag, cache-control, x-requested-with'
       response['Access-Control-Expose-Headers'] = 'ETag'
     end
 
