@@ -4,6 +4,7 @@ require 'webrick/https'
 require 'openssl'
 require 'securerandom'
 require 'cgi'
+require 'fakes3/util'
 require 'fakes3/file_store'
 require 'fakes3/xml_adapter'
 require 'fakes3/bucket_query'
@@ -490,12 +491,12 @@ module FakeS3
       request.body { |chunk| parts_xml << chunk }
 
       # TODO: improve parsing xml
-      parts_xml = parts_xml.scan(/\<Part\>.*?<\/Part\>/m)
+      parts_xml = parts_xml.scan(/<Part>.*?<\/Part>/m)
 
       parts_xml.collect do |xml|
         {
-          number: xml[/\<PartNumber\>(\d+)\<\/PartNumber\>/, 1].to_i,
-          etag:   xml[/\<ETag\>\"(.+)\"\<\/ETag\>/, 1]
+          number: xml[/<PartNumber>(\d+)<\/PartNumber>/, 1].to_i,
+          etag:   FakeS3::Util.strip_before_and_after(xml[/\<ETag\>(.+)<\/ETag>/, 1], '"')
         }
       end
     end
