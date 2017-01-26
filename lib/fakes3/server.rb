@@ -495,7 +495,7 @@ module FakeS3
       parts_xml.collect do |xml|
         {
           number: xml[/\<PartNumber\>(\d+)\<\/PartNumber\>/, 1].to_i,
-          etag:   xml[/\<ETag\>\"(.+)\"\<\/ETag\>/, 1]
+          etag:   xml[/\<ETag\>(?:&#34;|\")(.+)(?:&#34;|\")\<\/ETag\>/, 1]
         }
       end
     end
