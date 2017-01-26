@@ -4,7 +4,7 @@ require 'rest-client'
 class PostTest < Test::Unit::TestCase
   # Make sure you have a posttest.localhost in your /etc/hosts/
   def setup
-    @url='http://localhost:10453/'
+    @url='http://posttest.localhost:10453/'
   end
 
   def teardown
