@@ -4,16 +4,20 @@ require 'rest-client'
 class PostTest < Test::Unit::TestCase
   # Make sure you have a posttest.localhost in your /etc/hosts/
   def setup
-    @url='http://posttest.localhost:10453/'
+    @url='http://localhost:10453/'
   end
 
   def teardown
   end
 
   def test_options
-    res= RestClient.options(@url) { |response|
+    RestClient.options(@url) do |response|
+      assert_equal(response.code, 200)
       assert_equal(response.headers[:access_control_allow_origin],"*")
-    }
+      assert_equal(response.headers[:access_control_allow_methods], "PUT, POST, HEAD, GET, OPTIONS")
+      assert_equal(response.headers[:access_control_allow_headers], "Accept, Content-Type, Authorization, Content-Length, ETag, X-CSRF-Token")
+      assert_equal(response.headers[:access_control_expose_headers], "ETag")
+    end
   end
 
   def test_redirect
