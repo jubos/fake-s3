@@ -1,6 +1,5 @@
 require 'test/test_helper'
 require 'fileutils'
-#require 'fakes3/server'
 require 'right_aws'
 require 'time'
 
@@ -22,12 +21,20 @@ class RightAWSCommandsTest < Test::Unit::TestCase
   end
 
   def test_store
-    @s3.put("s3media","helloworld", "Hello World Man!")
+    @s3.put("s3media", "helloworld", "Hello World Man!")
     obj = @s3.get("s3media", "helloworld")
     assert_equal "Hello World Man!", obj[:object]
-
-    obj = @s3.get("s3media", "helloworld")
   end
+
+  # TODO - get Chinese to work
+  #def test_store_chinese
+  #  ni_hao = "你好"
+  #  great_wall = "中国的长城"
+#
+  #  @s3.put("s3media", ni_hao, great_wall)
+  #  obj = @s3.get("s3media", ni_hao)
+  #  assert_equal(great_wall, obj[:object])
+  #end
 
   def test_store_not_found
     begin
@@ -47,13 +54,17 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     end
 
     buf_len = buffer.length
+    time_before = Time.now
     @s3.put("s3media", "big", buffer)
 
     output = ""
     @s3.get("s3media","big") do |chunk|
       output << chunk
     end
-    assert_equal buf_len, output.size
+    time_after = Time.now
+
+    assert(time_after - time_before < 2) # Should run in under 2 seconds on normal machines
+    assert_equal(buf_len, output.size)
   end
 
   # Test that GET requests with a delimiter return a list of
@@ -164,7 +175,6 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     rescue
       fail 'Should have caught NoSuchBucket Exception'
     end
-
   end
 
   def test_if_none_match
