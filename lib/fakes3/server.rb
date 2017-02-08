@@ -456,7 +456,6 @@ module FakeS3
     def normalize_request(webrick_req)
       host_header= webrick_req["Host"]
       host = host_header.split(':')[0]
-      inspect
 
       s_req = Request.new
       s_req.path = webrick_req.path
