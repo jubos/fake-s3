@@ -27,7 +27,7 @@ class PostTest < Test::Unit::TestCase
       'success_action_redirect'=>'http://somewhere.else.com/',
       'file'=>File.new(__FILE__,"rb")
     ) { |response|
-      assert_equal(response.code, 307)
+      assert_equal(response.code, 303)
       assert_equal(response.headers[:location], 'http://somewhere.else.com/')
     }
   end

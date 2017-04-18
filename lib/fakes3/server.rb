@@ -282,7 +282,7 @@ module FakeS3
         response['Etag'] = "\"#{real_obj.md5}\""
 
         if success_action_redirect
-          response.status      = 307
+          response.status      = 303
           response.body        = ""
           response['Location'] = success_action_redirect
         else
