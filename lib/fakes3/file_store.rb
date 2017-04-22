@@ -16,10 +16,11 @@ module FakeS3
     # sub second precision.
     SUBSECOND_PRECISION = 3
 
-    def initialize(root)
+    def initialize(root, quiet_mode)
       @root = root
       @buckets = []
       @bucket_hash = {}
+      @quiet_mode = quiet_mode
       Dir[File.join(root,"*")].each do |bucket|
         bucket_name = File.basename(bucket)
         bucket_obj = Bucket.new(bucket_name,Time.now,[])
@@ -95,8 +96,10 @@ module FakeS3
         real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
         return real_obj
       rescue
-        puts $!
-        $!.backtrace.each { |line| puts line }
+        unless @quiet_mode
+          puts $!
+          $!.backtrace.each { |line| puts line }
+        end
         return nil
       end
     end
@@ -210,8 +213,10 @@ module FakeS3
         bucket.add(obj)
         return obj
       rescue
-        puts $!
-        $!.backtrace.each { |line| puts line }
+        unless @quiet_mode
+          puts $!
+          $!.backtrace.each { |line| puts line }
+        end
         return nil
       end
     end
