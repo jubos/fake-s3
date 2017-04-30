@@ -23,9 +23,9 @@ To run the server, you just specify a root and a port.
 
 ## Licensing
 
-As of the latest version, we are licensing with Supported Source. To get a license, visit:
+As of the latest version, we are licensing with Super Source. To get a license, visit:
 
-https://supportedsource.org/projects/fake-s3 
+https://supso.org/projects/fake-s3 
 
 Depending on your company's size, the license may be free. It is also free for individuals.
 
