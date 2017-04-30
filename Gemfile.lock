@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    fakes3 (1.0.0)
+    fakes3 (1.1.0)
       builder
       thor
 
@@ -73,4 +73,4 @@ DEPENDENCIES
   test-unit
 
 BUNDLED WITH
-   1.10.2
+   1.14.6
