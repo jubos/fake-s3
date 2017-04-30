@@ -24,11 +24,11 @@ class PostTest < Test::Unit::TestCase
     res = RestClient.post(
       @url,
       'key'=>'uploads/12345/${filename}',
-      'success_action_redirect'=>'http://somewhere.else.com/',
+      'success_action_redirect'=>'http://somewhere.else.com/?foo=bar',
       'file'=>File.new(__FILE__,"rb")
     ) { |response|
-      assert_equal(response.code, 307)
-      assert_equal(response.headers[:location], 'http://somewhere.else.com/')
+      assert_equal(response.code, 303)
+      assert_equal(response.headers[:location], 'http://somewhere.else.com/?foo=bar&bucket=posttest&key=uploads%2F12345%2Fpost_test.rb')
     }
   end
 

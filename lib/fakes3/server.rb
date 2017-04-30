@@ -282,9 +282,14 @@ module FakeS3
         response['Etag'] = "\"#{real_obj.md5}\""
 
         if success_action_redirect
-          response.status      = 307
+          object_params = [ [ :bucket, s_req.bucket ], [ :key, key ] ]
+          location_uri = URI.parse(success_action_redirect)
+          original_location_params = URI.decode_www_form(String(location_uri.query))
+          location_uri.query = URI.encode_www_form(original_location_params + object_params)
+
+          response.status      = 303
           response.body        = ""
-          response['Location'] = success_action_redirect
+          response['Location'] = location_uri.to_s
         else
           response.status = success_action_status || 204
           if response.status == "201"
