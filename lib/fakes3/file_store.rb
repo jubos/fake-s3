@@ -41,7 +41,7 @@ module FakeS3
         elsif rate_limit =~ /^(.*)G$/
           RateLimitableFile.rate_limit = $1.to_f * 1000000000
         else
-          raise "Invalid Rate Limit Format: Valid values include (1000,10K,1.1M)"
+          raise "Invalid Rate Limit Format: Valid values include (1000,10K,1.1M,1.1G)"
         end
       else
         RateLimitableFile.rate_limit = nil
