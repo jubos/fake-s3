@@ -356,8 +356,9 @@ module FakeS3
         end
 
         if elems.size == 0
-          raise UnsupportedOperation
-        elsif elems.size == 1
+          raise UnsupportedOperation unless s_req.bucket
+          s_req.type = Request::DELETE_BUCKET          
+        elsif (elems.size == 1) && s_req.is_path_style
           s_req.type = Request::DELETE_BUCKET
           s_req.query = query
         else
