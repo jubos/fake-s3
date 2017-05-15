@@ -432,10 +432,18 @@ module FakeS3
       # for multipart copy
       copy_source = webrick_req.header["x-amz-copy-source"]
       if copy_source and copy_source.size == 1
-        src_elems   = copy_source.first.split("/")
-        root_offset = src_elems[0] == "" ? 1 : 0
-        s_req.src_bucket = src_elems[root_offset]
-        s_req.src_object = src_elems[1 + root_offset,src_elems.size].join("/")
+
+        if !s_req.is_path_style
+          # bucket value changed so src_bucket must also change
+          s_req.src_bucket = s_req.bucket
+          s_req.src_object = copy_source.first
+        else
+          src_elems   = copy_source.first.split("/")
+          root_offset = src_elems[0] == "" ? 1 : 0
+          s_req.src_bucket = src_elems[root_offset]
+          s_req.src_object = src_elems[1 + root_offset,src_elems.size].join("/")
+        end
+
         s_req.type = Request::COPY
       end
 
