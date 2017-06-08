@@ -167,15 +167,8 @@ module FakeS3
     def store_object(bucket, object_name, request)
       filedata = ""
 
-      # TODO put a tmpfile here first and mv it over at the end
-      content_type = request.content_type || ""
-
-      match = content_type.match(/^multipart\/form-data; boundary=(.+)/)
-      boundary = match[1] if match
-      if boundary
-        boundary = WEBrick::HTTPUtils::dequote(boundary)
-        form_data = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
-
+      form_data = parse_multipart_form request
+      if form_data
         if form_data['file'] == nil || form_data['file'] == ""
           raise WEBrick::HTTPStatus::BadRequest
         end
@@ -185,10 +178,10 @@ module FakeS3
         request.body { |chunk| filedata << chunk }
       end
 
-      do_store_object(bucket, object_name, filedata, request)
+      do_store_object(bucket, object_name, filedata, request, form_data)
     end
 
-    def do_store_object(bucket, object_name, filedata, request)
+    def do_store_object(bucket, object_name, filedata, request, formdata = nil)
       begin
         filename = File.join(@root, bucket.name, object_name)
         FileUtils.mkdir_p(filename)
@@ -201,7 +194,7 @@ module FakeS3
 
         File.open(content,'wb') { |f| f << filedata }
 
-        metadata_struct = create_metadata(content, request)
+        metadata_struct = create_metadata(content, request, formdata)
         File.open(metadata,'w') do |f|
           f << YAML::dump(metadata_struct)
         end
@@ -270,14 +263,14 @@ module FakeS3
     end
 
     # TODO: abstract getting meta data from request.
-    def create_metadata(content, request)
+    def create_metadata(content, request, formdata = nil)
       metadata = {}
       metadata[:md5] = Digest::MD5.file(content).hexdigest
-      metadata[:content_type] = request.header["content-type"].first
-      if request.header['content-disposition']
-        metadata[:content_disposition] = request.header['content-disposition'].first
+      metadata[:content_type] = form_or_request_header(request, formdata, 'content-type')
+      if (disposition = form_or_request_header(request, formdata, 'content-disposition'))
+        metadata[:content_disposition] = disposition
       end
-      content_encoding = request.header["content-encoding"].first
+      content_encoding = form_or_request_header(request, formdata, 'content-encoding')
       metadata[:content_encoding] = content_encoding
       #if content_encoding
       #  metadata[:content_encoding] = content_encoding
@@ -288,7 +281,7 @@ module FakeS3
       metadata[:custom_metadata] = {}
 
       # Add custom metadata from the request header
-      request.header.each do |key, value|
+      each_header_and_form_field(request, formdata) do |key, value|
         match = /^x-amz-([^-]+)-(.*)$/.match(key)
         next unless match
         if match[1].eql?('meta') && (match_key = match[2])
@@ -298,6 +291,51 @@ module FakeS3
         metadata[:amazon_metadata][key.gsub(/^x-amz-/, '')] = value.join(', ')
       end
       return metadata
+    end
+
+    private
+
+    # parse the request's body to get the multipart form data
+    def parse_multipart_form(request)
+      content_type = request.content_type || ""
+
+      if (match = content_type.match(/^multipart\/form-data; boundary=(.+)/))
+        boundary = WEBrick::HTTPUtils::dequote(match[1])
+        data = WEBrick::HTTPUtils::parse_form_data(request.body, boundary)
+
+        # downcase all form data keys
+        data.inject({}) do |h, (key, val)|
+          h[key.downcase] = val
+          h
+        end
+      else
+        nil
+      end
+    end
+
+    # Get value from either form data or request's header
+    def form_or_request_header(request, formdata, field)
+      field = field.downcase
+      if formdata && (value = formdata[field])
+        return value
+      elsif (value = request.header[field])
+        return value.first
+      end
+
+      nil
+    end
+
+    # Each request's header and form data field
+    # (except a field with file content)
+    def each_header_and_form_field(request, formdata)
+      request.header.each do |key, value|
+        yield key, value if block_given?
+      end
+
+      formdata.each do |key, value|
+        # yield if this is not a file
+        yield key, [value] if !value.filename && block_given?
+      end if formdata
     end
   end
 end
