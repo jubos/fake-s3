@@ -269,6 +269,23 @@ module FakeS3
       end
     end
 
+    def delete_objects(bucket, objects, request)
+      begin
+        filenames = []
+        objects.each do |object_name|
+          filenames << File.join(@root,bucket.name,object_name)
+          object = bucket.find(object_name)
+          bucket.remove(object)
+        end
+
+        FileUtils.rm_rf(filenames)
+      rescue
+        puts $!
+        $!.backtrace.each { |line| puts line }
+        return nil
+      end
+    end
+
     # TODO: abstract getting meta data from request.
     def create_metadata(content, request)
       metadata = {}

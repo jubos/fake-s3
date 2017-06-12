@@ -7,6 +7,7 @@ require 'cgi'
 require 'fakes3/util'
 require 'fakes3/file_store'
 require 'fakes3/xml_adapter'
+require 'fakes3/xml_parser'
 require 'fakes3/bucket_query'
 require 'fakes3/unsupported_operation'
 require 'fakes3/errors'
@@ -26,6 +27,7 @@ module FakeS3
     MOVE = "MOVE"
     DELETE_OBJECT = "DELETE_OBJECT"
     DELETE_BUCKET = "DELETE_BUCKET"
+    DELETE_OBJECTS = "DELETE_OBJECTS"
 
     attr_accessor :bucket, :object, :type, :src_bucket,
                   :src_object, :method, :webrick_request,
@@ -162,6 +164,7 @@ module FakeS3
           end
         end
         response['Content-Length'] = File::Stat.new(real_obj.io.path).size
+        response['Content-Disposition'] = 'attachment'
         if s_req.http_verb == 'HEAD'
           response.body = ""
 	        real_obj.io.close
@@ -240,6 +243,10 @@ module FakeS3
     end
 
     def do_POST(request,response)
+      if request.query_string === 'delete'
+        return do_DELETE(request, response)
+      end
+
       s_req = normalize_request(request)
       key   = request.query['key']
       query = CGI::parse(request.request_uri.query || "")
@@ -319,6 +326,10 @@ module FakeS3
       s_req = normalize_request(request)
 
       case s_req.type
+      when Request::DELETE_OBJECTS
+        bucket_obj = @store.get_bucket(s_req.bucket)
+        keys = XmlParser.delete_objects(s_req.webrick_request)
+        @store.delete_objects(bucket_obj,keys,s_req.webrick_request)
       when Request::DELETE_OBJECT
         bucket_obj = @store.get_bucket(s_req.bucket)
         @store.delete_object(bucket_obj,s_req.object,s_req.webrick_request)
@@ -332,7 +343,6 @@ module FakeS3
 
     def do_OPTIONS(request, response)
       super
-
       response['Access-Control-Allow-Origin']   = '*'
       response['Access-Control-Allow-Methods']  = 'PUT, POST, HEAD, GET, OPTIONS'
       response['Access-Control-Allow-Headers']  = 'Accept, Content-Type, Authorization, Content-Length, ETag, X-CSRF-Token, Content-Disposition'
@@ -358,8 +368,9 @@ module FakeS3
         if elems.size == 0
           raise UnsupportedOperation
         elsif elems.size == 1
-          s_req.type = Request::DELETE_BUCKET
+          s_req.type = webrick_req.query_string == 'delete' ? Request::DELETE_OBJECTS : Request::DELETE_BUCKET
           s_req.query = query
+          s_req.webrick_request = webrick_req
         else
           s_req.type = Request::DELETE_OBJECT
           object = elems[1,elems.size].join('/')
@@ -482,7 +493,11 @@ module FakeS3
       when 'DELETE'
         normalize_delete(webrick_req,s_req)
       when 'POST'
-        normalize_post(webrick_req,s_req)
+        if webrick_req.query_string != 'delete'
+          normalize_post(webrick_req,s_req)
+        else
+          normalize_delete(webrick_req,s_req)
+        end
       else
         raise "Unknown Request"
       end
