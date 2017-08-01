@@ -101,6 +101,7 @@ module FakeS3
           response.status = 404
           response.body = XmlAdapter.error_no_such_key(s_req.object)
           response['Content-Type'] = "application/xml"
+          response['Access-Control-Allow-Origin'] = '*'
           return
         end
 
