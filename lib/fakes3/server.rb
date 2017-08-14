@@ -126,8 +126,7 @@ module FakeS3
           response.header['Content-Encoding'] = real_obj.content_encoding
         end
 
-        response['Content-Disposition'] = real_obj.content_disposition if real_obj.content_disposition
-        stat = File::Stat.new(real_obj.io.path)
+        response['Content-Disposition'] = real_obj.content_disposition ? real_obj.content_disposition : 'attachment'
 
         response['Last-Modified'] = Time.iso8601(real_obj.modified_date).httpdate
         response.header['ETag'] = "\"#{real_obj.md5}\""
@@ -139,6 +138,7 @@ module FakeS3
           response.header['x-amz-meta-' + header] = value
         end
 
+        stat = File::Stat.new(real_obj.io.path)
         content_length = stat.size
 
         # Added Range Query support
@@ -164,7 +164,6 @@ module FakeS3
           end
         end
         response['Content-Length'] = File::Stat.new(real_obj.io.path).size
-        response['Content-Disposition'] = 'attachment'
         if s_req.http_verb == 'HEAD'
           response.body = ""
 	        real_obj.io.close
