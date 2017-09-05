@@ -171,6 +171,10 @@ module FakeS3
         else
           response.body = real_obj.io
         end
+
+        if real_obj.cache_control
+          response['Cache-Control'] = real_obj.cache_control
+        end
       end
     end
 
