@@ -370,7 +370,9 @@ module FakeS3
         end
 
         if elems.size == 0
-          raise UnsupportedOperation
+          s_req.type = Request::DELETE_OBJECTS
+          s_req.query = query
+          s_req.webrick_request = webrick_req
         elsif elems.size == 1
           s_req.type = webrick_req.query_string == 'delete' ? Request::DELETE_OBJECTS : Request::DELETE_BUCKET
           s_req.query = query
