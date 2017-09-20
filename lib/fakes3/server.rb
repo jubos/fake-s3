@@ -127,8 +127,7 @@ module FakeS3
           response.header['Content-Encoding'] = real_obj.content_encoding
         end
 
-        response['Content-Disposition'] = real_obj.content_disposition if real_obj.content_disposition
-        stat = File::Stat.new(real_obj.io.path)
+        response['Content-Disposition'] = real_obj.content_disposition ? real_obj.content_disposition : 'attachment'
 
         response['Last-Modified'] = Time.iso8601(real_obj.modified_date).httpdate
         response.header['ETag'] = "\"#{real_obj.md5}\""
@@ -140,6 +139,7 @@ module FakeS3
           response.header['x-amz-meta-' + header] = value
         end
 
+        stat = File::Stat.new(real_obj.io.path)
         content_length = stat.size
 
         # Added Range Query support
@@ -165,12 +165,15 @@ module FakeS3
           end
         end
         response['Content-Length'] = File::Stat.new(real_obj.io.path).size
-        response['Content-Disposition'] = 'attachment'
         if s_req.http_verb == 'HEAD'
           response.body = ""
 	        real_obj.io.close
         else
           response.body = real_obj.io
+        end
+
+        if real_obj.cache_control
+          response['Cache-Control'] = real_obj.cache_control
         end
       end
     end
@@ -367,7 +370,9 @@ module FakeS3
         end
 
         if elems.size == 0
-          raise UnsupportedOperation
+          s_req.type = Request::DELETE_OBJECTS
+          s_req.query = query
+          s_req.webrick_request = webrick_req
         elsif elems.size == 1
           s_req.type = webrick_req.query_string == 'delete' ? Request::DELETE_OBJECTS : Request::DELETE_BUCKET
           s_req.query = query

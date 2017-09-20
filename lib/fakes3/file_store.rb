@@ -96,6 +96,7 @@ module FakeS3
         real_obj.modified_date = metadata.fetch(:modified_date) do
           File.mtime(File.join(obj_root, "content")).utc.iso8601(SUBSECOND_PRECISION)
         end
+        real_obj.cache_control = metadata[:cache_control]
         real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
         return real_obj
       rescue
@@ -158,6 +159,7 @@ module FakeS3
       obj.content_encoding = src_metadata[:content_encoding] # if src_metadata[:content_encoding]
       obj.size = src_metadata[:size]
       obj.modified_date = src_metadata[:modified_date]
+      obj.cache_control = src_metadata[:cache_control]
 
       src_bucket.find(src_name)
       dst_bucket.add(obj)
@@ -214,6 +216,7 @@ module FakeS3
         obj.content_encoding = metadata_struct[:content_encoding] # if metadata_struct[:content_encoding]
         obj.size = metadata_struct[:size]
         obj.modified_date = metadata_struct[:modified_date]
+        obj.cache_control = metadata_struct[:cache_control]
 
         bucket.add(obj)
         return obj
@@ -294,6 +297,11 @@ module FakeS3
       if request.header['content-disposition']
         metadata[:content_disposition] = request.header['content-disposition'].first
       end
+
+      if request.header['cache-control']
+        metadata[:cache_control] = request.header['cache-control'].first
+      end
+
       content_encoding = request.header["content-encoding"].first
       metadata[:content_encoding] = content_encoding
       #if content_encoding
