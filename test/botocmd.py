@@ -1,6 +1,8 @@
 #!/usr/bin/python
+
 # -*- coding: utf-8 -*-
 # fakes3cmd.py -- an s3cmd-like script that accepts a custom host and portname
+from __future__ import print_function
 import re
 import os
 from optparse import OptionParser
@@ -21,12 +23,12 @@ class FakeS3Cmd(object):
         self._connect()
 
     def _connect(self):
-        print 'Connecting: %s:%s' % (self.host, self.port)
+        print('Connecting: %s:%s' % (self.host, self.port))
         self.conn = S3Connection(is_secure=False,
-                             calling_format=OrdinaryCallingFormat(),
-                             aws_access_key_id='',
-                             aws_secret_access_key='',
-                             port=self.port, host=self.host)
+                                 calling_format=OrdinaryCallingFormat(),
+                                 aws_access_key_id='',
+                                 aws_secret_access_key='',
+                                 port=self.port, host=self.host)
 
 
     @staticmethod
@@ -41,7 +43,7 @@ class FakeS3Cmd(object):
 
         bucket, _ = self._parse_uri(path)
         self.conn.create_bucket(bucket)
-        print 'made bucket: [%s]' % bucket
+        print('made bucket: [%s]' % bucket)
 
     def rb(self, path, *args):
         if not self.conn:
@@ -49,7 +51,7 @@ class FakeS3Cmd(object):
 
         bucket, _ = self._parse_uri(path)
         self.conn.delete_bucket(bucket)
-        print 'removed bucket: [%s]' % bucket
+        print('removed bucket: [%s]' % bucket)
 
     def put(self, *args):
         if not self.conn:
@@ -63,7 +65,7 @@ class FakeS3Cmd(object):
             key = Key(bucket)
             key.key = os.path.join(prefix, os.path.basename(src_file))
             key.set_contents_from_filename(src_file)
-            print 'stored: [%s]' % key.key
+            print('stored: [%s]' % key.key)
 
 
 if __name__ == "__main__":
