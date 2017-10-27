@@ -7,7 +7,11 @@ Bundler::GemHelper.install_tasks
 Rake::TestTask.new(:test) do |t|
   t.libs << "."
   t.test_files =
-    FileList['test/*_test.rb'].exclude('test/s3_commands_test.rb')
+    FileList['test/*_test.rb'].exclude('test/s3_commands_test.rb').exclude('test/aws_sdk_commands_test.rb')
+
+  # A lot of the gems like right aws and amazon sdk have a bunch of warnings, so
+  # this suppresses them for the test runs
+  t.warning = false
 end
 
 desc "Run the test_server"
