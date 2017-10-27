@@ -96,6 +96,7 @@ module FakeS3
         real_obj.modified_date = metadata.fetch(:modified_date) do
           File.mtime(File.join(obj_root, "content")).utc.iso8601(SUBSECOND_PRECISION)
         end
+        real_obj.cache_control = metadata[:cache_control]
         real_obj.custom_metadata = metadata.fetch(:custom_metadata) { {} }
         return real_obj
       rescue
@@ -158,6 +159,7 @@ module FakeS3
       obj.content_encoding = src_metadata[:content_encoding] # if src_metadata[:content_encoding]
       obj.size = src_metadata[:size]
       obj.modified_date = src_metadata[:modified_date]
+      obj.cache_control = src_metadata[:cache_control]
 
       src_bucket.find(src_name)
       dst_bucket.add(obj)
@@ -207,6 +209,7 @@ module FakeS3
         obj.content_encoding = metadata_struct[:content_encoding] # if metadata_struct[:content_encoding]
         obj.size = metadata_struct[:size]
         obj.modified_date = metadata_struct[:modified_date]
+        obj.cache_control = metadata_struct[:cache_control]
 
         bucket.add(obj)
         return obj
@@ -262,6 +265,23 @@ module FakeS3
       end
     end
 
+    def delete_objects(bucket, objects, request)
+      begin
+        filenames = []
+        objects.each do |object_name|
+          filenames << File.join(@root,bucket.name,object_name)
+          object = bucket.find(object_name)
+          bucket.remove(object)
+        end
+
+        FileUtils.rm_rf(filenames)
+      rescue
+        puts $!
+        $!.backtrace.each { |line| puts line }
+        return nil
+      end
+    end
+
     # TODO: abstract getting meta data from request.
     def create_metadata(content, request, formdata = nil)
       metadata = {}
@@ -270,6 +290,11 @@ module FakeS3
       if (disposition = form_or_request_header(request, formdata, 'content-disposition'))
         metadata[:content_disposition] = disposition
       end
+
+      if (cache_control = form_or_request_header(request, formdata, 'cache-control'))
+        metadata[:cache_control] = cache_control
+      end
+      
       content_encoding = form_or_request_header(request, formdata, 'content-encoding')
       metadata[:content_encoding] = content_encoding
       #if content_encoding
