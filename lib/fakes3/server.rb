@@ -4,6 +4,7 @@ require 'webrick/https'
 require 'openssl'
 require 'securerandom'
 require 'cgi'
+require 'uri'
 require 'fakes3/util'
 require 'fakes3/file_store'
 require 'fakes3/xml_adapter'
@@ -448,7 +449,8 @@ module FakeS3
       # for multipart copy
       copy_source = webrick_req.header["x-amz-copy-source"]
       if copy_source and copy_source.size == 1
-        src_elems   = copy_source.first.split("/")
+        copy_source = URI.unescape copy_source.first
+        src_elems   = copy_source.split("/")
         root_offset = src_elems[0] == "" ? 1 : 0
         s_req.src_bucket = src_elems[root_offset]
         s_req.src_object = src_elems[1 + root_offset,src_elems.size].join("/")

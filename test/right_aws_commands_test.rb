@@ -115,6 +115,13 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     assert_equal "Hello World", obj[:object]
   end
 
+  def test_intra_bucket_copy_urlencoded_source
+    @s3.put("s3media", "original==.txt", "Hello World")
+    @s3.copy("s3media", "original==.txt", "s3media", "copy.txt")
+    obj = @s3.get("s3media", "copy.txt")
+    assert_equal "Hello World", obj[:object]
+  end
+
   def test_copy_in_place
     @s3.put("s3media", "copy-in-place", "Hello World")
     @s3.copy("s3media", "copy-in-place", "s3media","copy-in-place")
