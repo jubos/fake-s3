@@ -184,6 +184,22 @@ class RightAWSCommandsTest < Test::Unit::TestCase
     end
   end
 
+  def test_if_match
+    @s3.put("s3media","if_match_test","Hello World 1!")
+    obj = @s3.get("s3media","if_match_test")
+    tag = obj[:headers]["etag"]
+    obj = @s3.get("s3media", "if_match_test", {"If-Match"=>tag})
+    assert_equal "Hello World 1!",obj[:object]
+    @s3.put("s3media","if_match_test","Hello World 2!")
+    begin
+      @s3.get("s3media", "if_match_test", {"If-Match"=>tag})
+    rescue RightAws::AwsError
+      # expected error for 412
+    else
+      fail 'Should have encountered an error due to the server not returning a response due to caching'
+    end
+  end
+
   def test_if_none_match
     @s3.put("s3media", "if_none_match_test", "Hello World 1!")
     obj = @s3.get("s3media", "if_none_match_test")
