@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    fakes3 (1.2.0)
+    fakes3 (1.2.1)
       builder
       thor
       xml-simple
