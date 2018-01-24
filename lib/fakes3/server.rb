@@ -49,12 +49,19 @@ module FakeS3
   end
 
   class Servlet < WEBrick::HTTPServlet::AbstractServlet
-    def initialize(server,store,hostname)
+    def initialize(server,store,hostname,cors_options)
       super(server)
       @store = store
       @hostname = hostname
       @port = server.config[:Port]
       @root_hostnames = [hostname,'localhost','s3.amazonaws.com','s3.localhost']
+
+      # Here lies hard-coded defaults for CORS Configuration
+      @cors_allow_origin = (cors_options['allow_origin'] or '*')
+      @cors_allow_methods = (cors_options['allow_methods'] or 'PUT, POST, HEAD, GET, OPTIONS')
+      @cors_preflight_allow_headers = (cors_options['preflight_allow_headers'] or 'Accept, Content-Type, Authorization, Content-Length, ETag, X-CSRF-Token, Content-Disposition')
+      @cors_post_put_allow_headers = (cors_options['post_put_allow_headers'] or 'Authorization, Content-Length')
+      @cors_expose_headers = (cors_options['expose_headers'] or 'ETag')
     end
 
     def validate_request(request)
@@ -101,7 +108,7 @@ module FakeS3
           response.status = 404
           response.body = XmlAdapter.error_no_such_key(s_req.object)
           response['Content-Type'] = "application/xml"
-          response['Access-Control-Allow-Origin'] = '*'
+          response['Access-Control-Allow-Origin'] = @cors_allow_origin
           return
         end
 
@@ -134,7 +141,7 @@ module FakeS3
         response.header['ETag'] = "\"#{real_obj.md5}\""
         response['Accept-Ranges'] = "bytes"
         response['Last-Ranges'] = "bytes"
-        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Origin'] = @cors_allow_origin
 
         real_obj.custom_metadata.each do |header, value|
           response.header['x-amz-meta-' + header] = value
@@ -188,7 +195,7 @@ module FakeS3
       response.status = 200
       response.body = ""
       response['Content-Type'] = "text/xml"
-      response['Access-Control-Allow-Origin'] = '*'
+      response['Access-Control-Allow-Origin'] = @cors_allow_origin
 
       case s_req.type
       when Request::COPY
@@ -240,9 +247,9 @@ module FakeS3
         response.header['ETag']  = "\"#{real_obj.md5}\""
       end
 
-      response['Access-Control-Allow-Origin']   = '*'
-      response['Access-Control-Allow-Headers']  = 'Authorization, Content-Length'
-      response['Access-Control-Expose-Headers'] = 'ETag'
+      response['Access-Control-Allow-Origin']   = @cors_allow_origin
+      response['Access-Control-Allow-Headers']  = @cors_post_put_allow_headers
+      response['Access-Control-Expose-Headers'] = @cors_expose_headers
 
       response.status = 200
     end
@@ -322,9 +329,9 @@ module FakeS3
       end
 
       response['Content-Type']                  = 'text/xml'
-      response['Access-Control-Allow-Origin']   = '*'
-      response['Access-Control-Allow-Headers']  = 'Authorization, Content-Length'
-      response['Access-Control-Expose-Headers'] = 'ETag'
+      response['Access-Control-Allow-Origin']   = @cors_allow_origin
+      response['Access-Control-Allow-Headers']  = @cors_post_put_allow_headers
+      response['Access-Control-Expose-Headers'] = @cors_expose_headers
     end
 
     def do_DELETE(request, response)
@@ -348,10 +355,10 @@ module FakeS3
 
     def do_OPTIONS(request, response)
       super
-      response['Access-Control-Allow-Origin']   = '*'
-      response['Access-Control-Allow-Methods']  = 'PUT, POST, HEAD, GET, OPTIONS'
-      response['Access-Control-Allow-Headers']  = 'Accept, Content-Type, Authorization, Content-Length, ETag, X-CSRF-Token, Content-Disposition'
-      response['Access-Control-Expose-Headers'] = 'ETag'
+      response['Access-Control-Allow-Origin']   = @cors_allow_origin
+      response['Access-Control-Allow-Methods']  = @cors_allow_methods
+      response['Access-Control-Allow-Headers']  = @cors_preflight_allow_headers
+      response['Access-Control-Expose-Headers'] = @cors_expose_headers
     end
 
     private
@@ -550,6 +557,7 @@ module FakeS3
       @hostname = hostname
       @ssl_cert_path = ssl_cert_path
       @ssl_key_path = ssl_key_path
+      @cors_options = extra_options[:cors_options] or {}
       webrick_config = {
         :BindAddress => @address,
         :Port => @port
@@ -575,7 +583,7 @@ module FakeS3
     end
 
     def serve
-      @server.mount "/", Servlet, @store, @hostname
+      @server.mount "/", Servlet, @store, @hostname, @cors_options
       shutdown = proc { @server.shutdown }
       trap "INT", &shutdown
       trap "TERM", &shutdown
