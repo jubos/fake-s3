@@ -6,25 +6,24 @@ class AwsSdkV2CommandsTest < Test::Unit::TestCase
     @creds = Aws::Credentials.new('123', 'abc')
     @s3    = Aws::S3::Client.new(credentials: @creds, region: 'us-east-1', endpoint: 'http://localhost:10453/')
     @resource = Aws::S3::Resource.new(client: @s3)
-    @bucket = @resource.create_bucket(bucket: 'v2_bucket')
+    @bucket = @resource.create_bucket(bucket: 'v2.bucket')
 
     # Delete all objects to avoid sharing state between tests
     @bucket.objects.each(&:delete)
   end
 
   def test_create_bucket
-    bucket = @resource.create_bucket(bucket: 'v2_create_bucket')
-    assert_not_nil bucket
+    assert_not_nil @bucket
 
     bucket_names = @resource.buckets.map(&:name)
-    assert(bucket_names.index("v2_create_bucket") >= 0)
+    assert_not_nil bucket_names.index("v2.bucket")
   end
 
   def test_destroy_bucket
     @bucket.delete
 
     begin
-      @s3.head_bucket(bucket: 'v2_bucket')
+      @s3.head_bucket(bucket: 'v2.bucket')
       assert_fail("Shouldn't succeed here")
     rescue
     end

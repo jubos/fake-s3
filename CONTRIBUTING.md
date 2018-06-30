@@ -16,6 +16,7 @@ There are some prerequisites to actually being able to run the unit/integration 
 On macOS, edit your /etc/hosts and add the following line:
 
     127.0.0.1 posttest.localhost
+    127.0.0.1 v2.bucket.localhost
 
 Then ensure that the following packages are installed (boto, s3cmd):
 
