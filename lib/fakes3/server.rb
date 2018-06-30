@@ -378,9 +378,13 @@ module FakeS3
         end
 
         if elems.size == 0
-          s_req.type = Request::DELETE_OBJECTS
-          s_req.query = query
-          s_req.webrick_request = webrick_req
+          if !s_req.is_path_style
+            s_req.type = Request::DELETE_BUCKET
+          else
+            s_req.type = Request::DELETE_OBJECTS
+            s_req.query = query
+            s_req.webrick_request = webrick_req
+          end
         elsif elems.size == 1
           s_req.type = webrick_req.query_string == 'delete' ? Request::DELETE_OBJECTS : Request::DELETE_BUCKET
           s_req.query = query
@@ -493,8 +497,9 @@ module FakeS3
       s_req.path = webrick_req.path
       s_req.is_path_style = true
 
-      if !@root_hostnames.include?(host) && !(IPAddr.new(host) rescue nil)
-        s_req.bucket = host.split(".")[0]
+      root_hostname = @root_hostnames.find { |hostname| host.end_with?(".#{hostname}") }
+      if root_hostname
+        s_req.bucket = host[0...-root_hostname.size - 1]
         s_req.is_path_style = false
       end
 
