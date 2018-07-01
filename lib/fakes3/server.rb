@@ -378,12 +378,12 @@ module FakeS3
         end
 
         if elems.size == 0
-          if !s_req.is_path_style
-            s_req.type = Request::DELETE_BUCKET
-          else
+          if s_req.is_path_style
             s_req.type = Request::DELETE_OBJECTS
             s_req.query = query
             s_req.webrick_request = webrick_req
+          else
+            s_req.type = Request::DELETE_BUCKET
           end
         elsif elems.size == 1
           s_req.type = webrick_req.query_string == 'delete' ? Request::DELETE_OBJECTS : Request::DELETE_BUCKET
