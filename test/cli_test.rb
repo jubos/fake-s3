@@ -10,7 +10,7 @@ class CLITest < Test::Unit::TestCase
   end
 
   def test_quiet_mode
-    script = FakeS3::CLI.new([], :root => '.', :port => 4567, :quiet => true)
+    script = FakeS3::CLI.new([], :root => '.', :port => 4567, :license => 'test', :quiet => true)
     assert_output('') do
       script.invoke(:server)
     end

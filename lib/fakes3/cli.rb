@@ -20,8 +20,28 @@ module FakeS3
     method_option :corspreflightallowheaders, :type => :string, :desc => 'Access-Control-Allow-Headers header return value for preflight OPTIONS requests'
     method_option :corspostputallowheaders, :type => :string, :desc => 'Access-Control-Allow-Headers header return value for POST and PUT requests'
     method_option :corsexposeheaders, :type => :string, :desc => 'Access-Control-Expose-Headers header return value'
+    method_option :license, :type => :string, :desc => 'Your license key, available at https://supso.org/projects/fake-s3'
 
     def server
+      license_key = options[:license]
+      if license_key.nil?
+        license_message = """
+======================
+As of version 1.3, Fake S3 requires a license key passed with --license YOUR_LICENSE_KEY.
+Please fix this before September 18, 2018.
+You can get a license at:
+https://supso.org/projects/fake-s3
+======================
+
+"""
+        licensing_required = Time.now > Time.utc(2018, 9, 19)
+        if licensing_required
+          abort license_message
+        else
+          warn license_message
+        end 
+      end
+      
       store = nil
       if options[:root]
         root = File.expand_path(options[:root])
@@ -65,7 +85,7 @@ module FakeS3
         abort "If you specify an SSL certificate you must also specify an SSL certificate key"
       end
 
-      puts "Loading FakeS3 with #{root} on port #{options[:port]} with hostname #{hostname}" unless options[:quiet]
+      puts "Loading Fake S3 with #{root} on port #{options[:port]} with hostname #{hostname}" unless options[:quiet]
       server = FakeS3::Server.new(address,options[:port],store,hostname,ssl_cert_path,ssl_key_path, quiet: !!options[:quiet], cors_options: cors_options)
       server.serve
     end

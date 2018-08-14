@@ -17,9 +17,9 @@ Many commands are supported, including put, get, list, copy, and make bucket.
 
 ## Running
 
-To run the server, you just specify a root and a port.
+To run the server, you must specify a root, a port, and your license key.
 
-    fakes3 -r /mnt/fakes3_root -p 4567
+    fakes3 -r /mnt/fakes3_root -p 4567 --license YOUR_LICENSE_KEY
 
 ## Licensing
 
@@ -28,6 +28,8 @@ As of the latest version, we are licensing with Super Source. To get a license, 
 https://supso.org/projects/fake-s3 
 
 Depending on your company's size, the license may be free. It is also free for individuals.
+
+You pass the license key to Fake S3 with the command line option --license YOUR_LICENSE_KEY.
 
 ## Connecting to Fake S3
 

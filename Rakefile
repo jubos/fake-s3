@@ -16,7 +16,7 @@ end
 
 desc "Run the test_server"
 task :test_server do |t|
-  system("bundle exec bin/fakes3 --port 10453 --root test_root  --corspostputallowheaders 'Authorization, Content-Length, Cache-Control'")
+  system("bundle exec bin/fakes3 --port 10453 --license test --root test_root  --corspostputallowheaders 'Authorization, Content-Length, Cache-Control'")
 end
 
 task :default => :test
