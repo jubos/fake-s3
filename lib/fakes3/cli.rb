@@ -34,7 +34,12 @@ https://supso.org/projects/fake-s3
 ======================
 
 """
-        warn license_message
+        licensing_required = Time.now > Time.utc(2018, 9, 19)
+        if licensing_required
+          abort license_message
+        else
+          warn license_message
+        end
       end
       
       store = nil
