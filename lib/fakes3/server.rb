@@ -565,7 +565,8 @@ module FakeS3
       @cors_options = extra_options[:cors_options] or {}
       webrick_config = {
         :BindAddress => @address,
-        :Port => @port
+        :Port => @port,
+        :DoNotReverseLookup => true
       }
       if !@ssl_cert_path.to_s.empty?
         webrick_config.merge!(
