@@ -200,6 +200,40 @@ module FakeS3
       output
     end
 
+    # <ListPartsResult>
+    #   <Bucket>example-bucket</Bucket>
+    #   <Key>example-object</Key>
+    #   <UploadId>upload-id</UploadId>
+    #   <PartNumberMarker>0</PartNumberMarker>
+    #   <Part>
+    #     <PartNumber>1</PartNumber>
+    #     <LastModified>2010-11-10T20:48:34.000Z</LastModified>
+    #     <ETag>"7778aef83f66abc1fa1e8477f296d394"</ETag>
+    #     <Size>10485760</Size>
+    #   </Part>
+    # </ListPartsResult>
+    def self.list_parts_result(bucket_name, object_name, upload_id, parts)
+      output = ""
+      xml = Builder::XmlMarkup.new(:target => output)
+      xml.instruct! :xml, :version=>"1.0", :encoding=>"UTF-8"
+      xml.ListPartsResult do |result|
+        result.bucket(bucket_name)
+        result.key(object_name)
+        result.UploadId(upload_id)
+        result.PartNumberMarker(0)
+        parts.each do |part|
+          result.Part do |part_xml|
+            part_xml.PartNumber(part[:part_num])
+            part_xml.ETag(part[:etag].inspect)
+            part_xml.Size(part[:size])
+            part_xml.LastModified(part[:last_mod])
+          end
+        end
+      end
+
+      output
+    end
+
     # <CompleteMultipartUploadResult>
     #   <Location>http://Example-Bucket.s3.amazonaws.com/Example-Object</Location>
     #   <Bucket>Example-Bucket</Bucket>

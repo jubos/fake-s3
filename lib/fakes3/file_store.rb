@@ -229,26 +229,43 @@ module FakeS3
       end
     end
 
-    def combine_object_parts(bucket, upload_id, object_name, parts, request)
-      upload_path   = File.join(@root, bucket.name)
-      base_path     = File.join(upload_path, "#{upload_id}_#{object_name}")
+    def list_object_parts(bucket_name, object_name, upload_id)
+      pattern = File.join(@root, bucket_name, "#{upload_id}_#{object_name}*")
+      Dir.glob(pattern).map do |path|
+        file = File.open(File.join(path, SHUCK_METADATA_DIR, 'content'), 'rb')
+        part = file.read
+        file.close
+        {
+          part_num: path.match(/_part(\d+)$/)[1],
+          etag: Digest::MD5.hexdigest(part),
+          size: part.size,
+          last_mod: File.mtime(path).utc.iso8601(SUBSECOND_PRECISION)
+        }
+      end
+    end
+
+    def combine_object_parts(bucket_name, object_name, upload_id, parts, request)
+      upload_path = File.join(@root, bucket_name)
+      base_path = File.join(upload_path, "#{upload_id}_#{object_name}")
 
       complete_file = ""
-      chunk         = ""
-      part_paths    = []
 
+      part_paths = []
       parts.sort_by { |part| part[:number] }.each do |part|
         part_path    = "#{base_path}_part#{part[:number]}"
         content_path = File.join(part_path, FAKE_S3_METADATA_DIR, 'content')
 
-        File.open(content_path, 'rb') { |f| chunk = f.read }
+        file = File.open(content_path, 'rb')
+        chunk = file.read
         etag = Digest::MD5.hexdigest(chunk)
 
-        raise new Error "invalid file chunk" unless part[:etag] == etag
+        fail StandardError, "invalid part #{part[:etag]}" unless part[:etag] == etag
         complete_file << chunk
-        part_paths    << part_path
+        part_paths << part_path
+        file.close
       end
 
+      bucket = get_bucket(bucket_name)
       object = do_store_object(bucket, object_name, complete_file, request)
 
       # clean up parts
