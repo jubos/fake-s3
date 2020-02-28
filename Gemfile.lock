@@ -42,7 +42,7 @@ GEM
     nokogiri (1.10.5)
       mini_portile2 (~> 2.4.0)
     power_assert (1.1.1)
-    rake (12.2.1)
+    rake (13.0.1)
     rest-client (2.0.2)
       http-cookie (>= 1.0.2, < 2.0)
       mime-types (>= 1.16, < 4.0)
