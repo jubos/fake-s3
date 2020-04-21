@@ -12,8 +12,8 @@ module FakeS3
     method_option :address, :type => :string, :aliases => '-a', :required => false, :desc => "Bind to this address. Defaults to all IP addresses of the machine."
     method_option :hostname, :type => :string, :aliases => '-H', :desc => "The root name of the host. Defaults to s3.amazonaws.com."
     method_option :quiet, :type => :boolean, :aliases => '-q', :desc => "Quiet; do not write anything to standard output."
-    method_option :background, :type => :boolean, :aliases => '-b', :required => false, :desc => 'Run the server process in the background. Defaults to false.'
-    method_option :output, :type => :string, :required => false, :desc => 'Optional file to log server output to. Only used if running in the background with -b.'
+    method_option :background, :type => :boolean, :aliases => '-b', :desc => "Run the server process in the background. Defaults to false."
+    method_option :output, :type => :string, :desc => "Optional file to log server output to. Only used if running in the background with -b."
     method_option :limit, :aliases => '-l', :type => :string, :desc => 'Rate limit for serving (ie. 50K, 1.0M)'
     method_option :sslcert, :type => :string, :desc => 'Path to SSL certificate'
     method_option :sslkey, :type => :string, :desc => 'Path to SSL certificate key'
