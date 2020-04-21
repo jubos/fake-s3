@@ -10,7 +10,7 @@ module FakeS3
     method_option :root, :type => :string, :aliases => '-r', :required => true
     method_option :port, :type => :numeric, :aliases => '-p', :required => true
     method_option :address, :type => :string, :aliases => '-a', :required => false, :desc => "Bind to this address. Defaults to all IP addresses of the machine."
-    method_option :hostname, :type => :string, :aliases => '-H', :desc => "The root name of the host.  Defaults to s3.amazonaws.com."
+    method_option :hostname, :type => :string, :aliases => '-H', :desc => "The root name of the host. Defaults to s3.amazonaws.com."
     method_option :quiet, :type => :boolean, :aliases => '-q', :desc => "Quiet; do not write anything to standard output."
     method_option :limit, :aliases => '-l', :type => :string, :desc => 'Rate limit for serving (ie. 50K, 1.0M)'
     method_option :sslcert, :type => :string, :desc => 'Path to SSL certificate'
