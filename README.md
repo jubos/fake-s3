@@ -21,6 +21,12 @@ To run the server, you must specify a root, a port, and your license key.
 
     fakes3 -r /mnt/fakes3_root -p 4567 --license YOUR_LICENSE_KEY
 
+### Running in the background
+
+To run the server as a background process, use the -b flag. You can optionally specify where to write any output with the --output option.
+
+    fakes3 -r /mnt/fakes3_root -p 4567 -b --license YOUR_LICENSE_KEY
+
 ## Licensing
 
 As of the latest version, we are licensing with Super Source. To get a license, visit:

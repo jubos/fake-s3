@@ -10,8 +10,10 @@ module FakeS3
     method_option :root, :type => :string, :aliases => '-r', :required => true
     method_option :port, :type => :numeric, :aliases => '-p', :required => true
     method_option :address, :type => :string, :aliases => '-a', :required => false, :desc => "Bind to this address. Defaults to all IP addresses of the machine."
-    method_option :hostname, :type => :string, :aliases => '-H', :desc => "The root name of the host.  Defaults to s3.amazonaws.com."
+    method_option :hostname, :type => :string, :aliases => '-H', :desc => "The root name of the host. Defaults to s3.amazonaws.com."
     method_option :quiet, :type => :boolean, :aliases => '-q', :desc => "Quiet; do not write anything to standard output."
+    method_option :background, :type => :boolean, :aliases => '-b', :required => false, :desc => 'Run the server process in the background. Defaults to false.'
+    method_option :output, :type => :string, :required => false, :desc => 'Optional file to log server output to. Only used if running in the background with -b.'
     method_option :limit, :aliases => '-l', :type => :string, :desc => 'Rate limit for serving (ie. 50K, 1.0M)'
     method_option :sslcert, :type => :string, :desc => 'Path to SSL certificate'
     method_option :sslkey, :type => :string, :desc => 'Path to SSL certificate key'
@@ -80,13 +82,15 @@ https://supso.org/projects/fake-s3
       address = options[:address]
       ssl_cert_path = options[:sslcert]
       ssl_key_path = options[:sslkey]
+      background = options[:background] || false
+      output = options[:output] || nil
 
       if (ssl_cert_path.nil? && !ssl_key_path.nil?) || (!ssl_cert_path.nil? && ssl_key_path.nil?)
         abort "If you specify an SSL certificate you must also specify an SSL certificate key"
       end
 
       puts "Loading Fake S3 with #{root} on port #{options[:port]} with hostname #{hostname}" unless options[:quiet]
-      server = FakeS3::Server.new(address,options[:port],store,hostname,ssl_cert_path,ssl_key_path, quiet: !!options[:quiet], cors_options: cors_options)
+      server = FakeS3::Server.new(address, options[:port], store, hostname, ssl_cert_path, ssl_key_path, quiet: !!options[:quiet], cors_options: cors_options, background: background, output: output)
       server.serve
     end
 
