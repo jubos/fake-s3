@@ -583,13 +583,13 @@ module FakeS3
           :Logger => WEBrick::Log.new("/dev/null"),
           :AccessLog => []
         )
-      elsif extra_options[:background] && extra_options[:output]
+      elsif extra_options[:daemon] && extra_options[:output]
         webrick_config.merge!(
           :Logger => WEBrick::Log.new(extra_options[:output])
         )
       end
 
-      WEBrick::Daemon.start if extra_options[:background]
+      WEBrick::Daemon.start if extra_options[:daemon]
       @server = WEBrick::HTTPServer.new(webrick_config)
     end
 
