@@ -21,11 +21,17 @@ To run the server, you must specify a root, a port, and your license key.
 
     fakes3 -r /mnt/fakes3_root -p 4567 --license YOUR_LICENSE_KEY
 
+### Running in the background
+
+To run the server as a daemon process (in the background), use the -d flag. You can optionally specify where to write any output with the --output option.
+
+    fakes3 -r /mnt/fakes3_root -p 4567 --license YOUR_LICENSE_KEY -d
+
 ## Licensing
 
 As of the latest version, we are licensing with Super Source. To get a license, visit:
 
-https://supso.org/projects/fake-s3 
+https://supso.org/projects/fake-s3
 
 Depending on your company's size, the license may be free. It is also free for individuals.
 
@@ -33,8 +39,8 @@ You pass the license key to Fake S3 with the command line option --license YOUR_
 
 ## Connecting to Fake S3
 
-Take a look at the test cases to see client example usage.  For now, Fake S3 is
-mainly tested with s3cmd, aws-s3 gem, and right_aws.  There are plenty more
+Take a look at the test cases to see client example usage. For now, Fake S3 is
+mainly tested with s3cmd, aws-s3 gem, and right_aws. There are plenty more
 libraries out there, and please do mention if other clients work or not.
 
 Here is a running list of [supported clients](https://github.com/jubos/fake-s3/wiki/Supported-Clients "Supported Clients")
