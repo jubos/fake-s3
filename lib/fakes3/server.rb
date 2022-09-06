@@ -25,6 +25,7 @@ module FakeS3
     SET_ACL = "SET_ACL"
     MOVE = "MOVE"
     DELETE_OBJECT = "DELETE_OBJECT"
+    DELETE_OBJECTS = "DELETE_OBJECTS"
     DELETE_BUCKET = "DELETE_BUCKET"
 
     attr_accessor :bucket,:object,:type,:src_bucket,
@@ -241,6 +242,10 @@ module FakeS3
     end
 
     def do_POST(request,response)
+      if request.query_string =~ /delete/i
+        return do_DELETE(request, response)
+      end
+
       s_req = normalize_request(request)
       key   = request.query['key']
       query = CGI::parse(request.request_uri.query || "")
@@ -317,6 +322,9 @@ module FakeS3
         @store.delete_object(bucket_obj,s_req.object,s_req.webrick_request)
       when Request::DELETE_BUCKET
         @store.delete_bucket(s_req.bucket)
+      when Request::DELETE_OBJECTS
+        bucket_obj = @store.get_bucket(s_req.bucket)
+        @store.delete_objects(bucket_obj, s_req.webrick_request)
       end
 
       response.status = 204
@@ -449,6 +457,10 @@ module FakeS3
         s_req.object = elems[1..-1].join('/') if elems.size >= 2
       else
         s_req.object = path[1..-1]
+      end
+
+      if webrick_req.query_string =~ /delete/i
+        s_req.type = Request::DELETE_OBJECTS
       end
     end
 
