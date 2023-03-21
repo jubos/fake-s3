@@ -5,7 +5,7 @@ require 'fakes3/bucket'
 require 'fakes3/rate_limitable_file'
 require 'digest/md5'
 require 'yaml'
-
+require 'shellwords'
 module FakeS3
   class FileStore
     FAKE_S3_METADATA_DIR = ".fakes3_metadataFFF"
@@ -22,10 +22,24 @@ module FakeS3
       @bucket_hash = {}
       @quiet_mode = quiet_mode
       Dir[File.join(root,"*")].each do |bucket|
+        next unless File.directory?(bucket)
         bucket_name = File.basename(bucket)
         bucket_obj = Bucket.new(bucket_name,Time.now,[])
         @buckets << bucket_obj
         @bucket_hash[bucket_name] = bucket_obj
+        Thread.new(bucket_obj, bucket) do |bucket_obj, bucket|
+          Dir.glob("#{bucket}/**/*").each do |path|
+            next if File.directory?(path)
+            stat = File.stat(path)
+            obj = S3Object.new
+            obj.name = path.sub(bucket + "/", '')
+            obj.modified_date = stat.mtime
+            obj.size = stat.size
+            obj.md5 = Digest::MD5.file(path).hexdigest
+            obj.content_type = `file --brief --mime #{Shellwords.escape(path)}`
+            bucket_obj.add(obj)
+          end
+        end
       end
     end
 
@@ -49,6 +63,7 @@ module FakeS3
     end
 
     def buckets
+    raise "no: #{@buckets.inspect}"
       @buckets
     end
 
