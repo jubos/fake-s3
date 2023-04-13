@@ -19,7 +19,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rest-client"
   s.add_development_dependency "rake"
   s.add_development_dependency "aws-sdk", "~> 2"
-  s.add_development_dependency "aws-sdk-v1"
   s.add_development_dependency "test-unit"
   s.add_development_dependency "mocha"
   #s.add_development_dependency "ruby-debug"
@@ -27,6 +26,8 @@ Gem::Specification.new do |s|
   s.add_dependency "thor"
   s.add_dependency "builder"
   s.add_dependency "xml-simple"
+  s.add_dependency "webrick"
+  s.add_dependency "rexml"
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")

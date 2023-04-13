@@ -1,5 +1,5 @@
 require 'test/test_helper'
-require 'aws-sdk-v1'
+require 'aws-sdk'
 require 'rest-client'
 
 class AwsSdkCommandsTest < Test::Unit::TestCase
